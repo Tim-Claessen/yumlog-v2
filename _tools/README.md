@@ -1,38 +1,39 @@
-# 🛠️ Yumlog Developer Tools
+# Yumlog Developer Tools
 
-This folder contains Python scripts used to manage and maintain the Yumlog cookbook. These scripts help automate common tasks and keep everything neat and organized.
+Python scripts for maintaining the Yumlog cookbook. All three active scripts are run automatically by GitHub Actions; you can also run them locally.
 
-These are currently required to be run manually, however in future should be further autoamted through GitHub Actions & Pull Requests.
+## Scripts
 
-## 📋 Overview of Scripts
+### `import_from_form.py`
 
-### `form_to_md.py`
+Fetches new recipe submissions from the Google Form (via linked Google Sheet) and converts them into Markdown files in `/recipes/`. Skips duplicates based on timestamp.
 
-- Converts recipes from a Google Form (via linked Google Sheet) into Markdown files.
-- Avoids duplicates based on timestamp.
-- Saves new recipes into the `/recipes/` folder using the project’s recipe template.
+Requires `_secrets/google_service_account.json` locally. In production, the GitHub Actions workflow loads credentials from the `GOOGLE_SERVICE_ACCOUNT_JSON` secret.
 
 ### `update_indexes.py`
 
-- Regenerates the index pages by:
-  - Category
-  - Protein
-  - Alphabet
-- Uses the recipe front matter to organise and update pages in `/indexes/`.
+Regenerates the index pages by category, protein, and alphabet from recipe front matter. Writes pages in `/category/`, `/protein/`, and `/indexes/`.
 
 ### `search_prep.py`
 
-- Generates a `search.json` file used by the front-end to power the search bar on the site. It scans through the Markdown recipe files and extracts key fields like:
-    - Title
-    - Summary
-    - Categories
-    - Protein types
-    - Cooking time
+Generates `search.json` in the repo root for client-side search. Scans recipe Markdown files and extracts title, summary, categories, protein types, and cook time.
 
-## 📦 Dependencies
-
-Before running the scripts, ensure you have the required Python packages installed:
+## Running locally
 
 ```bash
 pip install -r requirements.txt
+python _tools/import_from_form.py
+python _tools/update_indexes.py
+python _tools/search_prep.py
 ```
+
+## Archive
+
+`archive/` contains deprecated scripts superseded by the active ones above:
+
+| File | Notes |
+|---|---|
+| `alphabet_generator.md` | Old Obsidian Dataview query — replaced by `update_indexes.py` |
+| `category_generator.md` | Old Obsidian Dataview query — replaced by `update_indexes.py` |
+| `protein_generator.md` | Old Obsidian Dataview query — not actively used |
+| `update_category.py` | Old Python script — superseded by `update_indexes.py` |

@@ -48,17 +48,19 @@ If you do not use Bundler, `jekyll serve` works once Jekyll is installed. The si
 | `_layouts/home.html` | Home page: hero, search, recent recipes, category/protein chips, optional submit CTA. |
 | `_layouts/recipe.html` | Recipe pages: metadata row (category, protein, times, source), then Markdown body. |
 | `_includes/recipe-card.html` | Reusable recipe card (used on home and in search results markup). |
-| `assets/css/tokens.css` | Design tokens (colours, type scale, motion, elevations). Light defaults on `:root`; `[data-theme="dark"]` overrides. |
-| `assets/css/main.css` | Layout and components. |
-| `assets/css/print.css` | Print styles for recipes (`media="print"`). |
+| `_assets/css/tokens.css` | Design tokens (colours, type scale, motion, elevations). Light defaults on `:root`; `[data-theme="dark"]` overrides. |
+| `_assets/css/main.css` | Layout and components. |
+| `_assets/css/print.css` | Print styles for recipes (`media="print"`). |
 
 Copy for the home hero comes from `_config.yml` (`title`, `description`, `home_lead`, `submit_recipe_url`). Prefer new colours as CSS variables in `tokens.css`, not hardcoded in components.
 
 ## Developer tools
 
-The `_tools/` directory has Python helpers for search index generation, index pages, form import, and images. See [_tools/README.md](_tools/README.md).
+The `_tools/` directory has Python helpers for recipe import, index generation, and search. See [_tools/README.md](_tools/README.md).
 
-GitHub Actions (`.github/workflows/process_recipes.yml`) can import form submissions and refresh indexes; the live site is still built by GitHub Pages’ Jekyll when you push to `main`.
+GitHub Actions (`.github/workflows/process_recipes.yml`) runs these automatically on a schedule; the live site is built by GitHub Pages’ Jekyll when you push to `main`.
+
+Work-in-progress features (AI generator, image pipeline) live in `_wip/`. See [_wip/README.md](_wip/README.md).
 
 ## Line endings
 
@@ -66,8 +68,7 @@ The repo uses `.gitattributes` with `* text=auto eol=lf` so text files normalize
 
 ## To-do
 
-- Improve the AI recipe generator experience (`ai_generator.md`)
-- Test and refine GitHub Actions automation
+- Ship AI recipe generator (`_wip/ai_generator.md`) — needs Netlify backend wired up
 - Optional: brief per-recipe descriptions in front matter
 
 ## Credits

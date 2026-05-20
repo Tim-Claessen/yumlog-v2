@@ -21,9 +21,9 @@
     href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="{{ '/assets/css/tokens.css' | relative_url }}" />
-  <link rel="stylesheet" href="{{ '/assets/css/main.css' | relative_url }}" />
-  <link rel="stylesheet" href="{{ '/assets/css/print.css' | relative_url }}" media="print" />
+  <link rel="stylesheet" href="{{ '/_assets/css/tokens.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/_assets/css/main.css' | relative_url }}" />
+  <link rel="stylesheet" href="{{ '/_assets/css/print.css' | relative_url }}" media="print" />
 </head>
 <body class="{% if page.layout == 'home' %}page-home{% endif %} {% if page.layout == 'recipe' %}page-recipe{% endif %} {% if page_path contains 'category/' %}page-browse-list page-browse-category{% endif %} {% if page_path contains 'protein/' %}page-browse-list page-browse-protein{% endif %} {% if page_path contains 'indexes/' %}page-index-hub{% endif %} {% if page_path contains 'indexes/alphabet' %}page-index-alphabet{% endif %}">
   <header class="site-header">

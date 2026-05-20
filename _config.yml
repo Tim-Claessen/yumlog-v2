@@ -1,3 +1,5 @@
+include: ["_assets"]
+
 title: Yumlog
 description: Tim & Zoe's Favorite Recipes
 baseurl: "/yumlog" # Only needed if hosted in a subdirectory
