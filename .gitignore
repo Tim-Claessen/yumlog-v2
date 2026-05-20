@@ -11,6 +11,9 @@ _secrets/
 # Windows system file
 Thumbs.db
 
+# Nested project copy (stale, can be deleted manually)
+yumlog/
+
 # Basic Jekyll gitignores (synchronize to Jekyll.gitignore)
 _site/
 .sass-cache/
