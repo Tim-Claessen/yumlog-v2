@@ -1,6 +1,7 @@
-# Ignore Obsidian/VS Code settings (safe to regenerate on each device)
+# Ignore tool settings (safe to regenerate on each device)
 .obsidian/
 .vscode/
+.claude/
 
 # Python venv
 .venv/

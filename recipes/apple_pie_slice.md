@@ -14,7 +14,7 @@ date_created: 2025-05-12
 layout: recipe
 ---
 
-# Apple Pie Slice 
+# Apple Pie Slice
 
 ## Ingredients
 
