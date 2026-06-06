@@ -1,4 +1,5 @@
 name: Process Recipes
+run-name: Refresh indexes and search
 on:
   workflow_dispatch:
   push:
