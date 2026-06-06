@@ -1,5 +1,4 @@
 # Appetisers & Sides
 
-This page is still simmering
-
-Oops! Looks like this page isn’t complete yet. But don’t worry — good things take time to cook.
+- [Mexican Beans (Frijoles)](../recipes/mexican_beans.md)
+- [Mexican Rice (Arroz Rojo)](../recipes/mexican_rice.md)

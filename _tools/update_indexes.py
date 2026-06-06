@@ -20,7 +20,7 @@ from collections import defaultdict
 # Constants - change these as needed or pass as args
 RECIPE_DIR = "recipes"
 INDEX_DIR = "indexes"
-PLACEHOLDER_TEXT_START = "⏳ This page is still simmering 🍳"
+PLACEHOLDER_TEXT_START = "This page is still simmering"
 OUTPUT_DIRS = {
     "category": "category",
     "protein": "protein"
@@ -50,7 +50,7 @@ def extract_yaml_front_matter(filepath):
             yaml_lines.append(line)
         return yaml.safe_load("".join(yaml_lines))
     except Exception as e:
-        print(f"❌ Error reading YAML front matter from {filepath}: {e}")
+        print(f"[ERROR] Error reading YAML front matter from {filepath}: {e}")
         return None
 
 def normalize_value(value):
@@ -132,7 +132,7 @@ def update_index_pages(field_name):
     """
     output_dir = OUTPUT_DIRS.get(field_name)
     if not output_dir:
-        print(f"❌ No output directory configured for field '{field_name}'")
+        print(f"[ERROR] No output directory configured for field '{field_name}'")
         return
 
     os.makedirs(output_dir, exist_ok=True)
@@ -146,19 +146,19 @@ def update_index_pages(field_name):
         path = os.path.join(RECIPE_DIR, filename)
         front = extract_yaml_front_matter(path)
         if not front:
-            print(f"⚠️ Skipping {filename}: no or invalid front matter")
+            print(f"[SKIP] {filename}: no or invalid front matter")
             continue
 
         field_data = front.get(field_name)
         if not field_data:
-            print(f"⚠️ Skipping {filename}: missing '{field_name}' field")
+            print(f"[SKIP] {filename}: missing '{field_name}' field")
             continue
 
         titles = front.get("title") or filename.replace("_", " ").replace(".md", "")
         values = get_field_values(field_data)
 
         if not values:
-            print(f"⚠️ Skipping {filename}: no valid {field_name} values found")
+            print(f"[SKIP] {filename}: no valid {field_name} values found")
             continue
 
         for value in values:
@@ -187,9 +187,9 @@ def update_index_pages(field_name):
             with open(output_path, 'w', encoding='utf-8') as f:
                 f.writelines(existing_header)
                 f.write("\n".join(link_lines) + "\n")
-            print(f"✅ Updated {field_name} page: {output_filename} ({len(recipes)} recipes)")
+            print(f"[OK] Updated {field_name} page: {output_filename} ({len(recipes)} recipes)")
         except Exception as e:
-            print(f"❌ Failed to write {output_path}: {e}")
+            print(f"[ERROR] Failed to write {output_path}: {e}")
 
 def update_alphabet_index(recipe_dir, index_dir):
     """
@@ -221,7 +221,7 @@ def update_alphabet_index(recipe_dir, index_dir):
                 title = filename.replace("_", " ").replace(".md", "")
             recipes.append((title, filename))
         except Exception as e:
-            print(f"⚠️ Skipping {filename} for alphabetical index due to error: {e}")
+            print(f"[SKIP] {filename} for alphabetical index due to error: {e}")
 
     recipes.sort(key=lambda x: x[0].lower())
 
@@ -232,20 +232,20 @@ def update_alphabet_index(recipe_dir, index_dir):
             with open(output_path, 'r', encoding='utf-8') as f:
                 existing_lines = f.readlines()
         except Exception as e:
-            print(f"❌ Failed to read existing alphabet index file: {e}")
+            print(f"[ERROR] Failed to read existing alphabet index file: {e}")
             existing_lines = []
 
         for line in existing_lines:
             if PLACEHOLDER_TEXT_START in line:
                 # Stop and remove placeholder block if found
-                print(f"🧹 Removed placeholder block from alphabetical index")
+                print(f"[INFO] Removed placeholder block from alphabetical index")
                 break
             if line.strip().startswith("- "):
                 # Stop before list items start
                 break
             before_links.append(line)
     else:
-        before_links = ["# 🔤 Alphabetical Index\n\n"]
+        before_links = ["# Alphabetical Index\n\n"]
 
     link_lines = [f"- [{title}](../{RECIPE_DIR}/{fname})" for title, fname in recipes]
 
@@ -255,22 +255,22 @@ def update_alphabet_index(recipe_dir, index_dir):
         with open(output_path, 'w', encoding='utf-8') as f:
             f.writelines(before_links)
             f.write("\n".join(link_lines) + "\n")
-        print(f"🎉 All done updating alphabet index page.")
+        print(f"[DONE] All done updating alphabet index page.")
     except Exception as e:
-        print(f"❌ Failed to write alphabetical index file: {e}")
+        print(f"[ERROR] Failed to write alphabetical index file: {e}")
 
 
 if __name__ == "__main__":
     try:
         for field in ["category", "protein"]:
                 update_index_pages(field)
-                print(f"🎉 All done updating {field} pages.")
+                print(f"[DONE] All done updating {field} pages.")
         
         update_alphabet_index(RECIPE_DIR, INDEX_DIR)
-        print("✅ All indexes updated successfully.")
-        
+        print("[OK] All indexes updated successfully.")
+
     except Exception as e:
-        print(f"❌ Script failed: {e}")
+        print(f"[ERROR] Script failed: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

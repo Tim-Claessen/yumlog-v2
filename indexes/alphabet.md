@@ -13,6 +13,7 @@ title: 🔤 A-Z
 - [Cauliflower Biryani](../recipes/cauliflower_biryani.md)
 - [Cheesy Garlic Sourdough Focaccia](../recipes/cheesy_garlic_sourdough_focaccia.md)
 - [Chia Seed Egg](../recipes/chia_seed_egg.md)
+- [Chickpea & Sweet Potato Curry](../recipes/chickpea_curry.md)
 - [Chickpea and Cauliflower Salad](../recipes/chickpea_and_cauliflower_salad.md)
 - [Choc Chip Cookies](../recipes/choc_chip_cookies.md)
 - [Cinnamon Roll Sourdough Focaccia](../recipes/cinnamon_roll_sourdough_focaccia.md)

@@ -1,6 +1,6 @@
 ---
-title: Slow Cooker Chickpea & Sweet Potato Curry
-category: "[[curry]]"
+title: Chickpea & Sweet Potato Curry
+category: "[[slow_cooker]]"
 protein:
   - "[[chickpeas]]"
 prep_time_mins: 20
