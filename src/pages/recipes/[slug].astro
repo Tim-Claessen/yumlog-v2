@@ -1,0 +1,190 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { supabase } from '../../lib/supabase';
+import { toDisplayLabel, splitValues, parseStepLabel, stripBullet } from '../../lib/format';
+
+export async function getStaticPaths() {
+  const { data: recipes } = await supabase.from('recipes').select('slug');
+  return (recipes ?? []).map(r => ({ params: { slug: r.slug } }));
+}
+
+const { slug } = Astro.params;
+
+const [{ data: recipe }, { data: ingredients }] = await Promise.all([
+  supabase.from('recipes').select('*').eq('slug', slug!).single(),
+  supabase
+    .from('recipe_ingredients')
+    .select('display_name, ingredient, quantity, unit')
+    .eq('recipe_slug', slug!)
+    .order('id'),
+]);
+
+if (!recipe) return Astro.redirect('/');
+
+// Parse the multi-line method into individual steps (skip blank lines)
+const methodSteps: string[] = (recipe.method ?? '')
+  .split('\n')
+  .map((l: string) => l.trim())
+  .filter(Boolean);
+
+// Parse tips — stored one per line, may have leading bullet
+const tipLines: string[] = (recipe.tips ?? '')
+  .split('\n')
+  .map((l: string) => stripBullet(l.trim()))
+  .filter(Boolean);
+
+// Parse substitutions — stored one per line, may have leading bullet
+const subLines: string[] = (recipe.substitutions ?? '')
+  .split('\n')
+  .map((l: string) => stripBullet(l.trim()))
+  .filter(Boolean);
+
+// Format ingredient amount; omit the word "each" per display rules
+function formatAmount(quantity: number | string | null, unit: string | null): string {
+  const qty = quantity != null ? String(+quantity) : '';
+  const u   = unit === 'each' ? '' : (unit ?? '');
+  return [qty, u].filter(Boolean).join(' ');
+}
+
+const categoryChips = splitValues(recipe.category);
+const proteinChips  = splitValues(recipe.protein);
+---
+
+<Layout title={recipe.title} activeNav="recipes">
+
+  <!-- Back link -->
+  <a href="/" class="inline-flex items-center gap-1.5 text-sm text-on-surface-muted hover:text-primary mb-5 transition-colors">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="15 18 9 12 15 6"/>
+    </svg>
+    All recipes
+  </a>
+
+  <!-- Header card -->
+  <div class="bg-primary-container rounded-2xl px-5 py-5 mb-6">
+    <h1 class="font-serif text-2xl font-bold text-on-primary-container mb-4 leading-snug">
+      {recipe.title}
+    </h1>
+
+    <!-- Chips row -->
+    <div class="flex flex-wrap gap-2">
+      {categoryChips.map(c => (
+        <span class="bg-primary text-on-primary rounded-full px-3 py-1 text-xs font-medium">
+          {toDisplayLabel(c)}
+        </span>
+      ))}
+      {proteinChips.map(p => (
+        <span class="bg-secondary text-on-secondary rounded-full px-3 py-1 text-xs font-medium">
+          {toDisplayLabel(p)}
+        </span>
+      ))}
+      {recipe.cook_time_min && (
+        <span class="bg-white/60 text-on-primary-container rounded-full px-3 py-1 text-xs font-medium">
+          {recipe.cook_time_min}&thinsp;min
+        </span>
+      )}
+      {recipe.source_url && (
+        <a
+          href={recipe.source_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          class="bg-white/60 text-on-primary-container rounded-full px-3 py-1 text-xs font-medium hover:bg-white/80 transition-colors"
+        >
+          Source &rarr;
+        </a>
+      )}
+    </div>
+  </div>
+
+  <!-- Ingredients -->
+  {ingredients && ingredients.length > 0 && (
+    <section class="mb-8">
+      <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Ingredients</h2>
+      <div class="bg-white border border-outline-soft rounded-2xl overflow-hidden">
+        {ingredients.map((ing, i) => {
+          const amount = formatAmount(ing.quantity, ing.unit);
+          return (
+            <div class={`flex items-baseline gap-4 px-4 py-3 ${i > 0 ? 'border-t border-outline-soft' : ''}`}>
+              <span class="text-on-surface-muted tabular-nums text-sm shrink-0 w-16 text-right">
+                {amount}
+              </span>
+              <span class="text-on-surface text-sm">
+                {ing.display_name ?? ing.ingredient}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  )}
+
+  <!-- Method -->
+  {methodSteps.length > 0 && (
+    <section class="mb-8">
+      <h2 class="font-serif text-xl font-bold text-on-surface mb-4">Method</h2>
+      <ol class="flex flex-col gap-4">
+        {methodSteps.map((step, i) => {
+          const { label, body } = parseStepLabel(step);
+          return (
+            <li class="flex gap-4">
+              <span class="shrink-0 w-7 h-7 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center mt-0.5">
+                {i + 1}
+              </span>
+              <p class="text-on-surface leading-relaxed pt-0.5">
+                {label && <strong class="font-semibold">{label}: </strong>}
+                {body}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+    </section>
+  )}
+
+  <!-- Tips -->
+  {tipLines.length > 0 && (
+    <section class="mb-8">
+      <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Tips</h2>
+      <div class="bg-secondary-container rounded-2xl px-5 py-4">
+        <ul class="flex flex-col gap-2.5">
+          {tipLines.map(tip => {
+            const { label, body } = parseStepLabel(tip);
+            return (
+              <li class="flex gap-3 text-sm text-on-secondary-container leading-relaxed">
+                <span class="text-secondary mt-1 shrink-0" aria-hidden="true">&#x2022;</span>
+                <span>
+                  {label && <strong class="font-semibold">{label}: </strong>}
+                  {body}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  )}
+
+  <!-- Substitutions -->
+  {subLines.length > 0 && (
+    <section class="mb-8">
+      <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Substitutions</h2>
+      <div class="bg-surface-container rounded-2xl px-5 py-4">
+        <ul class="flex flex-col gap-2.5">
+          {subLines.map(sub => {
+            const { label, body } = parseStepLabel(sub);
+            return (
+              <li class="flex gap-3 text-sm text-on-surface leading-relaxed">
+                <span class="text-outline mt-1 shrink-0" aria-hidden="true">&#x2022;</span>
+                <span>
+                  {label && <strong class="font-semibold">{label}: </strong>}
+                  {body}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </section>
+  )}
+
+</Layout>

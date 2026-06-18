@@ -1,0 +1,100 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title?: string;
+  activeNav?: 'recipes' | 'shopping' | 'create';
+}
+
+const { title = 'Yumlog', activeNav = 'recipes' } = Astro.props;
+const pageTitle = title === 'Yumlog' ? 'Yumlog' : `${title} — Yumlog`;
+
+const navItems = [
+  { id: 'recipes',  href: '/',         label: 'Recipes' },
+  { id: 'shopping', href: '/shopping', label: 'Shopping' },
+  { id: 'create',   href: '/create',   label: 'Create' },
+] as const;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <title>{pageTitle}</title>
+  </head>
+  <body class="min-h-screen bg-surface text-on-surface">
+
+    <!-- Top app bar -->
+    <header class="bg-surface-low border-b border-outline-soft sticky top-0 z-20">
+      <div class="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
+        <a href="/" class="font-serif text-xl font-bold text-primary tracking-tight shrink-0">
+          Yumlog
+        </a>
+
+        <!-- Desktop nav -->
+        <nav class="hidden md:flex items-center gap-1" aria-label="Main navigation">
+          {navItems.map(item => (
+            <a
+              href={item.href}
+              class={[
+                'px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                activeNav === item.id
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'text-on-surface-muted hover:bg-surface-container',
+              ].join(' ')}
+            >
+              {item.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </header>
+
+    <!-- Page content — extra bottom padding on mobile for the fixed nav bar -->
+    <main class="max-w-4xl mx-auto px-4 py-6 pb-28 md:pb-8">
+      <slot />
+    </main>
+
+    <!-- Mobile bottom nav -->
+    <nav
+      class="md:hidden fixed bottom-0 inset-x-0 bg-surface-low border-t border-outline-soft z-20 safe-area-inset-bottom"
+      aria-label="Main navigation"
+    >
+      <div class="flex">
+        {navItems.map(item => {
+          const active = activeNav === item.id;
+          return (
+            <a
+              href={item.href}
+              class={[
+                'flex-1 flex flex-col items-center py-3 gap-0.5 text-xs font-medium transition-colors',
+                active ? 'text-primary' : 'text-on-surface-muted',
+              ].join(' ')}
+            >
+              <!-- Nav icons -->
+              {item.id === 'recipes' && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+              )}
+              {item.id === 'shopping' && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+                </svg>
+              )}
+              {item.id === 'create' && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+                </svg>
+              )}
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+      </div>
+    </nav>
+
+  </body>
+</html>

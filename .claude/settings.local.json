@@ -6,7 +6,9 @@
       "Bash(mkdir -p _wip/images/raw)",
       "Bash(git mv *)",
       "Bash(rmdir _raw_images)",
-      "Bash(touch _wip/images/raw/.gitkeep)"
+      "Bash(touch _wip/images/raw/.gitkeep)",
+      "Bash(ls -la \"c:\\\\Users\\\\timcl\\\\.repos\\\\yumlog-v2\\\\\" | head -30)",
+      "Read(//c/Users/timcl/.repos/**)"
     ]
   }
 }
