@@ -303,6 +303,45 @@ PUBLIC_SUPABASE_URL=https://nrmimftrjulvsgonrlzg.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<JWT anon key — see .env, never commit>
 ```
 
+Set the same variables in **Cloudflare Pages** → project → **Settings** → **Environment variables** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
+
+---
+
+## Deployment (Cloudflare Pages)
+
+Hosted at **Cloudflare Pages**, connected to GitHub repo `Tim-Claessen/yumlog-v2`.
+
+### Build settings
+
+| Setting | Value |
+| ------- | ----- |
+| Build command | `npm run build` |
+| Build output directory | `dist` |
+| Root directory | `/` (repo root) |
+
+No Cloudflare adapter — plain static output from `astro build`.
+
+### Automatic rebuilds on recipe changes
+
+Recipes are pre-rendered at build time (see **Critical rendering rule**). After create/edit in the app, the DB updates immediately; static HTML updates when Cloudflare finishes the next deploy (~2–3 min).
+
+**Cloudflare deploy hook** — Pages project → **Settings** → **Builds & deployments** → **Deploy hooks**. Create a hook on the production branch (`main`). Copy the secret POST URL.
+
+**Supabase database webhook** — **Database** → **Webhooks** → create webhook:
+
+| Field | Value |
+| ----- | ----- |
+| Table | `recipes` |
+| Events | INSERT, UPDATE, DELETE |
+| Method | POST |
+| URL | Cloudflare deploy hook URL |
+
+Hook `recipes` only — not `recipe_ingredients` or `shopping_list`. Every save touches `recipes` first; ingredients are written milliseconds later, well before the queued build fetches data. Shopping list is client-side only and does not need rebuilds.
+
+Treat the deploy hook URL like a password. Test with `curl -X POST "<hook-url>"` or by saving a recipe and checking webhook logs (Supabase) and **Deployments** (Cloudflare).
+
+Git pushes to `main` also trigger builds; the webhook covers DB-only changes from the create/edit form.
+
 ---
 
 ## Repo layout
