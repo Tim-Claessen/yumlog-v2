@@ -138,6 +138,15 @@ export async function clearChecked(): Promise<void> {
   if (error) throw error;
 }
 
+/** Remove every item from the shared list. */
+export async function clearAllItems(): Promise<void> {
+  const { error } = await supabase
+    .from('shopping_list')
+    .delete()
+    .neq('id', 0);
+  if (error) throw error;
+}
+
 export function subscribeShoppingList(onChange: () => void): () => void {
   const channel = supabase
     .channel('shopping_list_changes')

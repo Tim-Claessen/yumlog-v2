@@ -1,5 +1,6 @@
 import {
   addManualItem,
+  clearAllItems,
   clearChecked,
   deleteItem,
   fetchShoppingList,
@@ -36,6 +37,10 @@ export async function initShoppingListUI() {
   emptyEl = document.getElementById('shopping-empty')!;
   const addForm = document.getElementById('add-item-form') as HTMLFormElement;
   const clearBtn = document.getElementById('clear-checked')!;
+  const clearAllBtn = document.getElementById('clear-all')!;
+  const clearAllDialog = document.getElementById('clear-all-dialog')!;
+  const clearAllCancel = document.getElementById('clear-all-cancel')!;
+  const clearAllConfirm = document.getElementById('clear-all-confirm')!;
   const errorEl = document.getElementById('shopping-error')!;
 
   const knownIngredients = await fetchKnownIngredients();
@@ -84,6 +89,30 @@ export async function initShoppingListUI() {
       errorEl.classList.remove('hidden');
     }
   });
+
+  function openClearAllDialog() {
+    clearAllDialog.classList.remove('hidden');
+    clearAllCancel.focus();
+  }
+
+  function closeClearAllDialog() {
+    clearAllDialog.classList.add('hidden');
+  }
+
+  clearAllBtn?.addEventListener('click', openClearAllDialog);
+  clearAllCancel?.addEventListener('click', closeClearAllDialog);
+  clearAllDialog.querySelector('[data-dialog-backdrop]')?.addEventListener('click', closeClearAllDialog);
+
+  clearAllConfirm?.addEventListener('click', async () => {
+    closeClearAllDialog();
+    try {
+      await clearAllItems();
+      await refresh();
+    } catch (err) {
+      errorEl.textContent = err instanceof Error ? err.message : 'Could not clear list';
+      errorEl.classList.remove('hidden');
+    }
+  });
 }
 
 function parseQty(raw: string): number | null {
@@ -106,7 +135,9 @@ async function refresh() {
 function render() {
   listEl.innerHTML = '';
   emptyEl.classList.toggle('hidden', items.length > 0);
+  const hasItems = items.length > 0;
   document.getElementById('clear-checked')?.classList.toggle('hidden', !items.some(i => i.checked));
+  document.getElementById('clear-all')?.classList.toggle('hidden', !hasItems);
 
   for (const item of items) {
     listEl.appendChild(buildRow(item));

@@ -35,8 +35,8 @@ const proteinValues = [...new Set(
 <Layout title="Yumlog" activeNav="recipes">
 
   <!-- Hero + search -->
-  <section class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6">
-    <div class="flex items-center justify-between gap-4 mb-5">
+  <section id="hero" class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6 sm:mb-6 sticky top-16 z-10 transition-all duration-300">
+    <div id="hero-intro" class="flex items-center justify-between gap-4 mb-5 transition-all duration-300">
       <div>
         <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Tim &amp; Zoe's kitchen</p>
         <h1 class="font-serif text-2xl font-bold text-on-surface leading-snug">
@@ -61,9 +61,9 @@ const proteinValues = [...new Set(
     </div>
   </section>
 
-  <!-- Featured -->
+  <!-- Featured (hidden while searching, filtering, or scrolled on mobile) -->
   {featured.length > 0 && (
-    <section class="mb-6">
+    <section id="featured-section" class="mb-6 transition-all duration-300">
       <h2 class="font-serif text-lg font-bold text-on-surface mb-3">Featured</h2>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {featured.map(r => (
@@ -86,8 +86,81 @@ const proteinValues = [...new Set(
     </section>
   )}
 
-  <!-- Filters -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+  <!-- Mobile filters -->
+  <div class="sm:hidden mb-4">
+    <button
+      type="button"
+      id="filter-toggle"
+      class="inline-flex items-center gap-2 bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm font-medium text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors"
+      aria-expanded="false"
+      aria-controls="filter-panel"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+      </svg>
+      Filters
+      <span id="filter-badge" class="hidden min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-on-primary text-xs font-medium inline-flex items-center justify-center"></span>
+    </button>
+    <div id="active-filter-chips" class="hidden flex flex-wrap gap-2 mt-2"></div>
+  </div>
+
+  <!-- Mobile filter panel -->
+  <div
+    id="filter-panel"
+    class="hidden sm:hidden fixed inset-0 z-30"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="filter-panel-title"
+  >
+    <div class="absolute inset-0 bg-on-surface/20" id="filter-panel-backdrop"></div>
+    <div class="absolute inset-x-0 bottom-0 bg-surface rounded-t-2xl border-t border-outline-soft shadow-xl max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-outline-soft/60">
+        <h2 id="filter-panel-title" class="font-serif text-lg font-bold text-on-surface">Filters</h2>
+        <button type="button" id="filter-panel-close" class="text-sm font-medium text-primary px-2 py-1">Done</button>
+      </div>
+      <div class="p-4 flex flex-col gap-4">
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Category</span>
+          <select
+            id="filter-category-mobile"
+            class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+          >
+            <option value="">All categories</option>
+            {categoryValues.map(v => (
+              <option value={v}>{toDisplayLabel(v)}</option>
+            ))}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Protein</span>
+          <select
+            id="filter-protein-mobile"
+            class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+          >
+            <option value="">All proteins</option>
+            {proteinValues.map(v => (
+              <option value={v}>{toDisplayLabel(v)}</option>
+            ))}
+          </select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Cook time</span>
+          <select
+            id="filter-time-mobile"
+            class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+          >
+            <option value="">Any time</option>
+            <option value="under30">&lt; 30 min</option>
+            <option value="30to60">30–60 min</option>
+            <option value="over60">&gt; 60 min</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Desktop filters -->
+  <div class="hidden sm:grid grid-cols-3 gap-3 mb-5">
     <label class="flex flex-col gap-1">
       <span class="text-xs font-medium text-on-surface-muted">Category</span>
       <select
@@ -186,18 +259,114 @@ const proteinValues = [...new Set(
     time:     '',
   };
 
+  const TIME_LABELS: Record<string, string> = {
+    under30: '< 30 min',
+    '30to60': '30–60 min',
+    over60: '> 60 min',
+  };
+
   // ── Elements ─────────────────────────────────────────────────────────────────
   const searchEl   = document.getElementById('search')        as HTMLInputElement;
   const listEl     = document.getElementById('recipe-list')!;
   const countEl    = document.getElementById('recipe-count')!;
   const noRes      = document.getElementById('no-results')!;
   const clearBtn   = document.getElementById('clear-filters')!;
+  const featuredEl = document.getElementById('featured-section');
+  const heroEl     = document.getElementById('hero');
+  const heroIntro  = document.getElementById('hero-intro');
+  const filterBadge = document.getElementById('filter-badge');
+  const filterChips = document.getElementById('active-filter-chips');
+  const filterPanel = document.getElementById('filter-panel');
+  const filterToggle = document.getElementById('filter-toggle');
   const rows       = listEl ? Array.from(listEl.querySelectorAll<HTMLLIElement>('li')) : [];
+
+  const categoryEl = document.getElementById('filter-category') as HTMLSelectElement;
+  const proteinEl  = document.getElementById('filter-protein')  as HTMLSelectElement;
+  const timeEl     = document.getElementById('filter-time')     as HTMLSelectElement;
+  const categoryMobile = document.getElementById('filter-category-mobile') as HTMLSelectElement;
+  const proteinMobile  = document.getElementById('filter-protein-mobile')  as HTMLSelectElement;
+  const timeMobile     = document.getElementById('filter-time-mobile')     as HTMLSelectElement;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   function matchesMulti(stored: string, filterValue: string): boolean {
     if (!filterValue) return true;
     return stored.split(',').map(v => v.trim()).includes(filterValue);
+  }
+
+  function optionLabel(select: HTMLSelectElement | null, value: string): string {
+    if (!select || !value) return '';
+    const opt = select.querySelector(`option[value="${CSS.escape(value)}"]`);
+    return opt?.textContent?.trim() ?? value;
+  }
+
+  function syncSelectPairs() {
+    if (categoryEl && categoryMobile) categoryMobile.value = categoryEl.value;
+    if (proteinEl && proteinMobile) proteinMobile.value = proteinEl.value;
+    if (timeEl && timeMobile) timeMobile.value = timeEl.value;
+  }
+
+  function updateActiveChips() {
+    const chips: { key: string; label: string }[] = [];
+    const { category, protein, time } = activeFilters;
+
+    if (category) chips.push({ key: 'category', label: optionLabel(categoryEl, category) });
+    if (protein)  chips.push({ key: 'protein',  label: optionLabel(proteinEl, protein) });
+    if (time)     chips.push({ key: 'time',     label: TIME_LABELS[time] ?? time });
+
+    const count = chips.length;
+    filterBadge?.classList.toggle('hidden', count === 0);
+    if (filterBadge) filterBadge.textContent = count > 0 ? String(count) : '';
+
+    if (!filterChips) return;
+    filterChips.innerHTML = '';
+    if (chips.length === 0) {
+      filterChips.classList.add('hidden');
+      return;
+    }
+
+    filterChips.classList.remove('hidden');
+    for (const chip of chips) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'inline-flex items-center gap-1 bg-primary-container text-on-primary-container text-xs rounded-full px-2.5 py-1 font-medium';
+      btn.innerHTML = `${chip.label}<span aria-hidden="true">×</span>`;
+      btn.setAttribute('aria-label', `Remove ${chip.label} filter`);
+      btn.addEventListener('click', () => {
+        activeFilters[chip.key] = '';
+        if (chip.key === 'category') {
+          if (categoryEl) categoryEl.value = '';
+          if (categoryMobile) categoryMobile.value = '';
+        } else if (chip.key === 'protein') {
+          if (proteinEl) proteinEl.value = '';
+          if (proteinMobile) proteinMobile.value = '';
+        } else if (chip.key === 'time') {
+          if (timeEl) timeEl.value = '';
+          if (timeMobile) timeMobile.value = '';
+        }
+        applyFilters();
+      });
+      filterChips.appendChild(btn);
+    }
+  }
+
+  let heroCollapsed = false;
+
+  function updateBrowsingUI() {
+    const query = searchEl?.value.trim() ?? '';
+    const { category, protein, time } = activeFilters;
+    const isBrowsing = Boolean(query || category || protein || time);
+
+    featuredEl?.classList.toggle('hidden', isBrowsing || heroCollapsed);
+
+    if (heroEl && heroIntro) {
+      heroEl.classList.toggle('py-3', heroCollapsed);
+      heroEl.classList.toggle('py-6', !heroCollapsed);
+      heroEl.classList.toggle('mb-3', heroCollapsed);
+      heroEl.classList.toggle('mb-6', !heroCollapsed);
+      heroEl.classList.toggle('shadow-sm', heroCollapsed);
+      heroIntro.classList.toggle('hidden', heroCollapsed);
+      heroIntro.classList.toggle('mb-5', !heroCollapsed);
+    }
   }
 
   function applyFilters() {
@@ -224,35 +393,84 @@ const proteinValues = [...new Set(
     countEl.textContent = `(${visible})`;
     noRes.classList.toggle('hidden', visible > 0 || rows.length === 0);
     clearBtn.classList.toggle('hidden', !hasActive);
+    updateActiveChips();
+    updateBrowsingUI();
   }
 
-  // ── Dropdown changes ─────────────────────────────────────────────────────────
-  const categoryEl = document.getElementById('filter-category') as HTMLSelectElement;
-  const proteinEl  = document.getElementById('filter-protein')  as HTMLSelectElement;
-  const timeEl     = document.getElementById('filter-time')     as HTMLSelectElement;
-
-  function syncFiltersFromSelects() {
-    activeFilters.category = categoryEl?.value ?? '';
-    activeFilters.protein  = proteinEl?.value  ?? '';
-    activeFilters.time     = timeEl?.value     ?? '';
+  function syncFiltersFromSelects(source?: 'desktop' | 'mobile') {
+    if (source === 'mobile') {
+      activeFilters.category = categoryMobile?.value ?? '';
+      activeFilters.protein  = proteinMobile?.value  ?? '';
+      activeFilters.time     = timeMobile?.value     ?? '';
+      if (categoryEl) categoryEl.value = activeFilters.category;
+      if (proteinEl)  proteinEl.value  = activeFilters.protein;
+      if (timeEl)     timeEl.value     = activeFilters.time;
+    } else {
+      activeFilters.category = categoryEl?.value ?? '';
+      activeFilters.protein  = proteinEl?.value  ?? '';
+      activeFilters.time     = timeEl?.value     ?? '';
+      syncSelectPairs();
+    }
     applyFilters();
   }
 
-  categoryEl?.addEventListener('change', syncFiltersFromSelects);
-  proteinEl?.addEventListener('change', syncFiltersFromSelects);
-  timeEl?.addEventListener('change', syncFiltersFromSelects);
+  function openFilterPanel() {
+    filterPanel?.classList.remove('hidden');
+    filterToggle?.setAttribute('aria-expanded', 'true');
+    document.body.classList.add('overflow-hidden');
+  }
 
-  // ── Search ───────────────────────────────────────────────────────────────────
+  function closeFilterPanel() {
+    filterPanel?.classList.add('hidden');
+    filterToggle?.setAttribute('aria-expanded', 'false');
+    document.body.classList.remove('overflow-hidden');
+  }
+
+  categoryEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
+  proteinEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
+  timeEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
+  categoryMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
+  proteinMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
+  timeMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
+
+  filterToggle?.addEventListener('click', openFilterPanel);
+  document.getElementById('filter-panel-close')?.addEventListener('click', closeFilterPanel);
+  document.getElementById('filter-panel-backdrop')?.addEventListener('click', closeFilterPanel);
+
   searchEl?.addEventListener('input', applyFilters);
 
-  // ── Clear all ────────────────────────────────────────────────────────────────
   clearBtn?.addEventListener('click', () => {
     if (searchEl) searchEl.value = '';
     if (categoryEl) categoryEl.value = '';
     if (proteinEl)  proteinEl.value  = '';
     if (timeEl)     timeEl.value     = '';
+    if (categoryMobile) categoryMobile.value = '';
+    if (proteinMobile)  proteinMobile.value  = '';
+    if (timeMobile)     timeMobile.value     = '';
     Object.keys(activeFilters).forEach(k => { activeFilters[k] = ''; });
     applyFilters();
   });
+
+  // Collapse hero on mobile scroll so results get more room
+  const mobileMq = window.matchMedia('(max-width: 639px)');
+  function onScroll() {
+    if (!mobileMq.matches) {
+      if (heroCollapsed) {
+        heroCollapsed = false;
+        updateBrowsingUI();
+      }
+      return;
+    }
+    const next = window.scrollY > 72;
+    if (next !== heroCollapsed) {
+      heroCollapsed = next;
+      updateBrowsingUI();
+    }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  mobileMq.addEventListener('change', onScroll);
+
+  syncSelectPairs();
+  applyFilters();
 </script>
 

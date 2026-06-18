@@ -13,14 +13,63 @@ import Layout from '../layouts/Layout.astro';
         <h1 class="font-serif text-2xl font-bold text-on-surface">Shopping list</h1>
         <p class="text-sm text-on-surface-muted mt-1">Shared between Tim &amp; Zoe</p>
       </div>
-      <button
-        type="button"
-        id="clear-checked"
-        class="hidden text-sm font-medium text-primary hover:underline shrink-0"
-      >
-        Clear checked
-      </button>
+      <div class="flex flex-col items-end gap-1 shrink-0">
+        <button
+          type="button"
+          id="clear-checked"
+          class="hidden text-sm font-medium text-primary hover:underline"
+        >
+          Clear checked
+        </button>
+        <button
+          type="button"
+          id="clear-all"
+          class="hidden text-sm font-medium text-on-surface-muted hover:text-primary transition-colors"
+        >
+          Clear list
+        </button>
+      </div>
     </header>
+
+    <!-- Clear-all confirmation -->
+    <div
+      id="clear-all-dialog"
+      class="hidden fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="clear-all-title"
+    >
+      <div class="absolute inset-0 bg-on-surface/25 backdrop-blur-[2px]" data-dialog-backdrop></div>
+      <div class="relative w-full max-w-sm bg-surface rounded-2xl border border-outline-soft shadow-xl overflow-hidden">
+        <div class="bg-primary-container/40 px-5 pt-5 pb-4">
+          <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Just checking</p>
+          <h2 id="clear-all-title" class="font-serif text-xl font-bold text-on-surface leading-snug">
+            Clear the whole list?
+          </h2>
+        </div>
+        <div class="px-5 py-4">
+          <p class="text-sm text-on-surface-muted leading-relaxed">
+            This removes <strong class="font-medium text-on-surface">every item</strong> for both Tim and Zoe — not just the ticked ones. There&rsquo;s no undo.
+          </p>
+          <div class="flex gap-3 mt-5">
+            <button
+              type="button"
+              id="clear-all-cancel"
+              class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-on-surface-muted bg-surface-container hover:bg-surface-container/80 transition-colors"
+            >
+              Keep list
+            </button>
+            <button
+              type="button"
+              id="clear-all-confirm"
+              class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-on-primary bg-primary hover:opacity-90 transition-opacity"
+            >
+              Yes, clear all
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Manual add -->
     <form
