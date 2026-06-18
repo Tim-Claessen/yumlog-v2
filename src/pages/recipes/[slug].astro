@@ -2,6 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../lib/supabase';
 import { toDisplayLabel, splitValues, parseStepLabel, stripBullet } from '../../lib/format';
+import { displayIngredientName } from '../../lib/ingredient';
 
 export async function getStaticPaths() {
   const { data: recipes } = await supabase.from('recipes').select('slug');
@@ -48,9 +49,17 @@ function formatAmount(quantity: number | string | null, unit: string | null): st
 
 const categoryChips = splitValues(recipe.category);
 const proteinChips  = splitValues(recipe.protein);
+
+const shoppingIngredients = (ingredients ?? []).map(ing => ({
+  ingredient: ing.ingredient,
+  quantity: ing.quantity,
+  unit: ing.unit,
+}));
 ---
 
 <Layout title={recipe.title} activeNav="recipes">
+
+  <script id="recipe-shopping-data" type="application/json" set:html={JSON.stringify(shoppingIngredients)}></script>
 
   <!-- Back link -->
   <a href="/" class="inline-flex items-center gap-1.5 text-sm text-on-surface-muted hover:text-primary mb-5 transition-colors">
@@ -60,61 +69,85 @@ const proteinChips  = splitValues(recipe.protein);
     All recipes
   </a>
 
-  <!-- Header card -->
-  <div class="bg-primary-container rounded-2xl px-5 py-5 mb-6">
-    <h1 class="font-serif text-2xl font-bold text-on-primary-container mb-4 leading-snug">
+  <!-- Edit controls (authenticated only) -->
+  <div data-auth-only class="hidden flex flex-wrap gap-2 mb-5">
+    <a
+      href={`/create?edit=${slug}`}
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-primary border border-primary/30 rounded-full px-3 py-1.5 hover:bg-primary-container transition-colors"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+      </svg>
+      Edit recipe
+    </a>
+    <button
+      type="button"
+      id="add-to-shopping"
+      data-slug={slug}
+      class="inline-flex items-center gap-1.5 text-sm font-medium text-secondary border border-secondary/30 rounded-full px-3 py-1.5 hover:bg-secondary-container transition-colors"
+    >
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+      Add to shopping list
+    </button>
+  </div>
+
+  <!-- Header -->
+  <header class="mb-8">
+    <h1 class="font-serif text-2xl font-bold text-on-surface mb-3 leading-snug">
       {recipe.title}
     </h1>
 
-    <!-- Chips row -->
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       {categoryChips.map(c => (
-        <span class="bg-primary text-on-primary rounded-full px-3 py-1 text-xs font-medium">
+        <span class="bg-primary-container text-on-primary-container text-xs rounded-full px-2 py-0.5 font-medium">
           {toDisplayLabel(c)}
         </span>
       ))}
       {proteinChips.map(p => (
-        <span class="bg-secondary text-on-secondary rounded-full px-3 py-1 text-xs font-medium">
-          {toDisplayLabel(p)}
-        </span>
+        <span class="text-xs text-on-surface-muted">{toDisplayLabel(p)}</span>
       ))}
       {recipe.cook_time_min && (
-        <span class="bg-white/60 text-on-primary-container rounded-full px-3 py-1 text-xs font-medium">
-          {recipe.cook_time_min}&thinsp;min
-        </span>
+        <span class="text-xs text-on-surface-muted whitespace-nowrap">{recipe.cook_time_min}&thinsp;min</span>
       )}
       {recipe.source_url && (
         <a
           href={recipe.source_url}
           target="_blank"
           rel="noopener noreferrer"
-          class="bg-white/60 text-on-primary-container rounded-full px-3 py-1 text-xs font-medium hover:bg-white/80 transition-colors"
+          class="text-xs text-primary hover:underline"
         >
           Source &rarr;
         </a>
       )}
     </div>
-  </div>
+  </header>
 
   <!-- Ingredients -->
   {ingredients && ingredients.length > 0 && (
     <section class="mb-8">
       <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Ingredients</h2>
-      <div class="bg-white border border-outline-soft rounded-2xl overflow-hidden">
-        {ingredients.map((ing, i) => {
+      <ul class="flex flex-col gap-1.5">
+        {ingredients.map(ing => {
           const amount = formatAmount(ing.quantity, ing.unit);
+          const name = displayIngredientName(
+            ing.display_name ?? ing.ingredient,
+            ing.quantity,
+            ing.unit,
+          );
           return (
-            <div class={`flex items-baseline gap-4 px-4 py-3 ${i > 0 ? 'border-t border-outline-soft' : ''}`}>
-              <span class="text-on-surface-muted tabular-nums text-sm shrink-0 w-16 text-right">
+            <li class="flex items-baseline gap-4">
+              <span class="text-primary/70 tabular-nums text-sm shrink-0 w-16 text-right">
                 {amount}
               </span>
               <span class="text-on-surface text-sm">
-                {ing.display_name ?? ing.ingredient}
+                {name}
               </span>
-            </div>
+            </li>
           );
         })}
-      </div>
+      </ul>
     </section>
   )}
 
@@ -122,15 +155,15 @@ const proteinChips  = splitValues(recipe.protein);
   {methodSteps.length > 0 && (
     <section class="mb-8">
       <h2 class="font-serif text-xl font-bold text-on-surface mb-4">Method</h2>
-      <ol class="flex flex-col gap-4">
+      <ol class="flex flex-col gap-3 list-none pl-0">
         {methodSteps.map((step, i) => {
           const { label, body } = parseStepLabel(step);
           return (
-            <li class="flex gap-4">
-              <span class="shrink-0 w-7 h-7 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center mt-0.5">
-                {i + 1}
+            <li class="flex gap-3">
+              <span class="shrink-0 w-5 text-sm font-medium text-on-surface-muted tabular-nums pt-0.5">
+                {i + 1}.
               </span>
-              <p class="text-on-surface leading-relaxed pt-0.5">
+              <p class="text-on-surface text-sm leading-relaxed">
                 {label && <strong class="font-semibold">{label}: </strong>}
                 {body}
               </p>
@@ -145,22 +178,17 @@ const proteinChips  = splitValues(recipe.protein);
   {tipLines.length > 0 && (
     <section class="mb-8">
       <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Tips</h2>
-      <div class="bg-secondary-container rounded-2xl px-5 py-4">
-        <ul class="flex flex-col gap-2.5">
-          {tipLines.map(tip => {
-            const { label, body } = parseStepLabel(tip);
-            return (
-              <li class="flex gap-3 text-sm text-on-secondary-container leading-relaxed">
-                <span class="text-secondary mt-1 shrink-0" aria-hidden="true">&#x2022;</span>
-                <span>
-                  {label && <strong class="font-semibold">{label}: </strong>}
-                  {body}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      <ul class="flex flex-col gap-2 list-disc pl-5 marker:text-on-surface-muted">
+        {tipLines.map(tip => {
+          const { label, body } = parseStepLabel(tip);
+          return (
+            <li class="text-sm text-on-surface leading-relaxed pl-1">
+              {label && <strong class="font-semibold">{label}: </strong>}
+              {body}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   )}
 
@@ -168,23 +196,52 @@ const proteinChips  = splitValues(recipe.protein);
   {subLines.length > 0 && (
     <section class="mb-8">
       <h2 class="font-serif text-xl font-bold text-on-surface mb-3">Substitutions</h2>
-      <div class="bg-surface-container rounded-2xl px-5 py-4">
-        <ul class="flex flex-col gap-2.5">
-          {subLines.map(sub => {
-            const { label, body } = parseStepLabel(sub);
-            return (
-              <li class="flex gap-3 text-sm text-on-surface leading-relaxed">
-                <span class="text-outline mt-1 shrink-0" aria-hidden="true">&#x2022;</span>
-                <span>
-                  {label && <strong class="font-semibold">{label}: </strong>}
-                  {body}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      <ul class="flex flex-col gap-2 list-disc pl-5 marker:text-on-surface-muted">
+        {subLines.map(sub => {
+          const { label, body } = parseStepLabel(sub);
+          return (
+            <li class="text-sm text-on-surface leading-relaxed pl-1">
+              {label && <strong class="font-semibold">{label}: </strong>}
+              {body}
+            </li>
+          );
+        })}
+      </ul>
     </section>
   )}
 
 </Layout>
+
+<script>
+  import { getSession } from '../../lib/auth';
+  import { addRecipeIngredientsToList } from '../../lib/shopping-list';
+
+  const btn = document.getElementById('add-to-shopping');
+  const dataEl = document.getElementById('recipe-shopping-data');
+
+  btn?.addEventListener('click', async () => {
+    const session = await getSession();
+    if (!session) {
+      const redirect = encodeURIComponent(window.location.pathname);
+      window.location.href = `/login?redirect=${redirect}`;
+      return;
+    }
+
+    if (!dataEl?.textContent) return;
+
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.textContent = 'Adding…';
+
+    try {
+      const ingredients = JSON.parse(dataEl.textContent);
+      await addRecipeIngredientsToList(ingredients);
+      btn.textContent = 'Added!';
+      setTimeout(() => { window.location.href = '/shopping'; }, 600);
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+      alert(err instanceof Error ? err.message : 'Could not add to shopping list');
+    }
+  });
+</script>

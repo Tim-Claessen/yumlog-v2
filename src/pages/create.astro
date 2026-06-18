@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Create recipe" activeNav="create">
+  <div id="auth-checking" class="text-on-surface-muted text-center py-20 text-sm">
+    Checking session…
+  </div>
+
+  <div id="auth-content" class="hidden">
+    <header class="mb-6">
+      <h1 id="page-title" class="font-serif text-2xl font-bold text-on-surface mb-1">New recipe</h1>
+      <p class="text-sm text-on-surface-muted">Add a recipe to the cookbook.</p>
+    </header>
+
+    <form id="recipe-form" class="flex flex-col gap-8">
+      <!-- Basics -->
+      <section class="bg-surface-low rounded-2xl p-5 flex flex-col gap-4">
+        <h2 class="font-serif text-lg font-bold text-on-surface">Basics</h2>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Title <span class="text-primary">*</span></span>
+          <input
+            id="title"
+            name="title"
+            type="text"
+            required
+            placeholder="e.g. Garlic butter mushrooms"
+            class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+          />
+        </label>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <label class="flex flex-col gap-1">
+            <span class="text-xs font-medium text-on-surface-muted">Category</span>
+            <input
+              id="category"
+              name="category"
+              type="text"
+              list="category-options"
+              placeholder="e.g. sweet_treat"
+              class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+            />
+            <datalist id="category-options"></datalist>
+          </label>
+
+          <label class="flex flex-col gap-1">
+            <span class="text-xs font-medium text-on-surface-muted">Cook time (minutes)</span>
+            <input
+              id="cook-time"
+              name="cook_time_min"
+              type="number"
+              min="0"
+              step="1"
+              placeholder="45"
+              class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+            />
+          </label>
+        </div>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Protein</span>
+          <input
+            id="protein"
+            name="protein"
+            type="text"
+            list="protein-options"
+            placeholder="e.g. chickpea, lentils"
+            class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+          />
+          <datalist id="protein-options"></datalist>
+          <span class="text-xs text-on-surface-muted">Comma-separated for multiple values</span>
+        </label>
+
+        <label class="flex flex-col gap-1">
+          <span class="text-xs font-medium text-on-surface-muted">Source URL</span>
+          <input
+            id="source-url"
+            name="source_url"
+            type="url"
+            placeholder="https://…"
+            class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+          />
+        </label>
+      </section>
+
+      <!-- Ingredients -->
+      <section>
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="font-serif text-lg font-bold text-on-surface">Ingredients</h2>
+          <button type="button" id="add-ingredient" class="text-sm font-medium text-primary hover:underline">
+            + Add ingredient
+          </button>
+        </div>
+        <p class="text-xs text-on-surface-muted mb-3">
+          Start typing to match existing ingredients and avoid duplicates.
+        </p>
+        <div id="ingredients-list" class="flex flex-col gap-2"></div>
+      </section>
+
+      <!-- Method -->
+      <section>
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="font-serif text-lg font-bold text-on-surface">Method <span class="text-primary font-sans text-sm font-normal">*</span></h2>
+          <button type="button" id="add-method" class="text-sm font-medium text-primary hover:underline">
+            + Add step
+          </button>
+        </div>
+        <div id="method-list" class="flex flex-col gap-2"></div>
+      </section>
+
+      <!-- Tips -->
+      <section>
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="font-serif text-lg font-bold text-on-surface">Tips</h2>
+          <button type="button" id="add-tip" class="text-sm font-medium text-primary hover:underline">
+            + Add tip
+          </button>
+        </div>
+        <div id="tips-list" class="flex flex-col gap-2"></div>
+      </section>
+
+      <!-- Substitutions -->
+      <section>
+        <div class="flex items-baseline justify-between mb-3">
+          <h2 class="font-serif text-lg font-bold text-on-surface">Substitutions</h2>
+          <button type="button" id="add-sub" class="text-sm font-medium text-primary hover:underline">
+            + Add substitution
+          </button>
+        </div>
+        <div id="subs-list" class="flex flex-col gap-2"></div>
+      </section>
+
+      <p id="form-error" class="hidden text-sm text-primary" role="alert"></p>
+      <p id="form-success" class="hidden text-sm text-secondary" role="status"></p>
+
+      <div class="flex flex-wrap gap-3 pt-2">
+        <button
+          type="submit"
+          id="submit-btn"
+          class="bg-primary text-on-primary rounded-2xl px-6 py-3 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+        >
+          Create recipe
+        </button>
+        <a
+          href="/"
+          class="inline-flex items-center rounded-2xl px-6 py-3 text-sm font-medium text-on-surface-muted border border-outline-soft hover:bg-surface-container transition-colors"
+        >
+          Cancel
+        </a>
+      </div>
+    </form>
+  </div>
+</Layout>
+
+<script>
+  import { requireAuth } from '../lib/auth';
+  import { initRecipeForm } from '../lib/recipe-form-ui';
+
+  const checking = document.getElementById('auth-checking');
+  const content = document.getElementById('auth-content');
+
+  const editSlug = new URLSearchParams(window.location.search).get('edit');
+
+  requireAuth().then(async ok => {
+    if (!ok || !checking || !content) return;
+    checking.classList.add('hidden');
+    content.classList.remove('hidden');
+    await initRecipeForm(editSlug);
+  });
+</script>

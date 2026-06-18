@@ -9,8 +9,11 @@ interface Props {
 const { title = 'Yumlog', activeNav = 'recipes' } = Astro.props;
 const pageTitle = title === 'Yumlog' ? 'Yumlog' : `${title} — Yumlog`;
 
-const navItems = [
-  { id: 'recipes',  href: '/',         label: 'Recipes' },
+const publicNavItems = [
+  { id: 'recipes', href: '/', label: 'Recipes' },
+] as const;
+
+const authNavItems = [
   { id: 'shopping', href: '/shopping', label: 'Shopping' },
   { id: 'create',   href: '/create',   label: 'Create' },
 ] as const;
@@ -35,7 +38,7 @@ const navItems = [
 
         <!-- Desktop nav -->
         <nav class="hidden md:flex items-center gap-1" aria-label="Main navigation">
-          {navItems.map(item => (
+          {publicNavItems.map(item => (
             <a
               href={item.href}
               class={[
@@ -48,6 +51,35 @@ const navItems = [
               {item.label}
             </a>
           ))}
+          {authNavItems.map(item => (
+            <a
+              href={item.href}
+              data-nav-auth
+              class={[
+                'hidden px-4 py-2 rounded-full text-sm font-medium transition-colors',
+                activeNav === item.id
+                  ? 'bg-primary-container text-on-primary-container'
+                  : 'text-on-surface-muted hover:bg-surface-container',
+              ].join(' ')}
+            >
+              {item.label}
+            </a>
+          ))}
+          <a
+            href="/login"
+            data-nav-guest
+            class="px-4 py-2 rounded-full text-sm font-medium text-on-surface-muted hover:bg-surface-container transition-colors"
+          >
+            Log in
+          </a>
+          <button
+            type="button"
+            id="sign-out"
+            data-nav-auth
+            class="hidden px-4 py-2 rounded-full text-sm font-medium text-on-surface-muted hover:bg-surface-container transition-colors"
+          >
+            Sign out
+          </button>
         </nav>
       </div>
     </header>
@@ -63,7 +95,7 @@ const navItems = [
       aria-label="Main navigation"
     >
       <div class="flex">
-        {navItems.map(item => {
+        {publicNavItems.map(item => {
           const active = activeNav === item.id;
           return (
             <a
@@ -73,12 +105,24 @@ const navItems = [
                 active ? 'text-primary' : 'text-on-surface-muted',
               ].join(' ')}
             >
-              <!-- Nav icons -->
-              {item.id === 'recipes' && (
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-                </svg>
-              )}
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+              </svg>
+              <span>{item.label}</span>
+            </a>
+          );
+        })}
+        {authNavItems.map(item => {
+          const active = activeNav === item.id;
+          return (
+            <a
+              href={item.href}
+              data-nav-auth
+              class={[
+                'hidden flex-1 flex flex-col items-center py-3 gap-0.5 text-xs font-medium transition-colors',
+                active ? 'text-primary' : 'text-on-surface-muted',
+              ].join(' ')}
+            >
               {item.id === 'shopping' && (
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
@@ -93,8 +137,23 @@ const navItems = [
             </a>
           );
         })}
+        <a
+          href="/login"
+          data-nav-guest
+          class="flex-1 flex flex-col items-center py-3 gap-0.5 text-xs font-medium text-on-surface-muted transition-colors"
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+          </svg>
+          <span>Log in</span>
+        </a>
       </div>
     </nav>
+
+    <script>
+      import { initAuthUI } from '../lib/auth';
+      initAuthUI();
+    </script>
 
   </body>
 </html>

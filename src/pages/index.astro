@@ -1,8 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import RecipeCard from '../components/RecipeCard.astro';
 import { supabase } from '../lib/supabase';
 import { toDisplayLabel, splitValues } from '../lib/format';
+
+const FEATURED_SLUGS = ['sourdough-bread', 'mixed-berry-muffins', 'mexican-rice-arroz-rojo'] as const;
 
 const [{ data: recipes }, { data: featuredRaw }] = await Promise.all([
   supabase
@@ -12,12 +13,14 @@ const [{ data: recipes }, { data: featuredRaw }] = await Promise.all([
   supabase
     .from('recipes')
     .select('slug, title, category, protein, cook_time_min')
-    .order('created_at', { ascending: false })
-    .limit(4),
+    .in('slug', [...FEATURED_SLUGS]),
 ]);
 
-const list     = recipes     ?? [];
-const featured = featuredRaw ?? [];
+const list = recipes ?? [];
+const featuredBySlug = new Map((featuredRaw ?? []).map(r => [r.slug, r]));
+const featured = FEATURED_SLUGS
+  .map(slug => featuredBySlug.get(slug))
+  .filter((r): r is NonNullable<typeof r> => r != null);
 
 // Build unique chip values by splitting multi-value fields
 const categoryValues = [...new Set(
@@ -31,108 +34,99 @@ const proteinValues = [...new Set(
 
 <Layout title="Yumlog" activeNav="recipes">
 
-  <!-- Hero -->
-  <section class="bg-primary-container rounded-2xl px-5 py-6 mb-6 flex items-center justify-between gap-4">
-    <div>
-      <p class="text-xs font-medium text-primary uppercase tracking-widest mb-1">Tim &amp; Zoe's kitchen</p>
-      <h1 class="font-serif text-2xl font-bold text-on-primary-container leading-snug">
-        Everything we cook,<br />all in one place.
-      </h1>
+  <!-- Hero + search -->
+  <section class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6">
+    <div class="flex items-center justify-between gap-4 mb-5">
+      <div>
+        <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Tim &amp; Zoe's kitchen</p>
+        <h1 class="font-serif text-2xl font-bold text-on-surface leading-snug">
+          Everything we cook,<br />all in one place.
+        </h1>
+      </div>
+      <svg class="shrink-0 text-primary opacity-50" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
+      </svg>
     </div>
-    <svg class="shrink-0 text-primary opacity-60" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-    </svg>
+    <div class="relative">
+      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline/70" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input
+        id="search"
+        type="search"
+        placeholder="Search recipes…"
+        autocomplete="off"
+        class="w-full bg-surface-container/50 border border-transparent rounded-xl pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-outline/70 focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+      />
+    </div>
   </section>
-
-  <!-- Search -->
-  <div class="relative mb-4">
-    <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-    </svg>
-    <input
-      id="search"
-      type="search"
-      placeholder="Search recipes…"
-      autocomplete="off"
-      class="w-full bg-white border border-outline-soft rounded-2xl pl-10 pr-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
-    />
-  </div>
-
-  <!-- Filter chips -->
-  <div class="space-y-2 mb-5">
-    <!-- Category chips -->
-    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" role="group" aria-label="Filter by category">
-      <button
-        data-group="category" data-chip-value=""
-        class="chip-btn shrink-0 bg-primary text-on-primary rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-      >
-        All categories
-      </button>
-      {categoryValues.map(v => (
-        <button
-          data-group="category" data-chip-value={v}
-          class="chip-btn shrink-0 bg-white border border-outline-soft text-on-surface-muted rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface-container"
-        >
-          {toDisplayLabel(v)}
-        </button>
-      ))}
-    </div>
-
-    <!-- Protein chips -->
-    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" role="group" aria-label="Filter by protein">
-      <button
-        data-group="protein" data-chip-value=""
-        class="chip-btn shrink-0 bg-secondary text-on-secondary rounded-full px-3 py-1.5 text-xs font-medium transition-colors"
-      >
-        All proteins
-      </button>
-      {proteinValues.map(v => (
-        <button
-          data-group="protein" data-chip-value={v}
-          class="chip-btn shrink-0 bg-white border border-outline-soft text-on-surface-muted rounded-full px-3 py-1.5 text-xs font-medium transition-colors hover:bg-surface-container"
-        >
-          {toDisplayLabel(v)}
-        </button>
-      ))}
-    </div>
-
-    <!-- Cook time chips -->
-    <div class="flex gap-2 overflow-x-auto pb-1 -mx-4 px-4 scrollbar-none" role="group" aria-label="Filter by cook time">
-      {([
-        ['', 'Any time'],
-        ['under30', '< 30 min'],
-        ['30to60',  '30–60 min'],
-        ['over60',  '> 60 min'],
-      ] as const).map(([val, label]) => (
-        <button
-          data-group="time" data-chip-value={val}
-          class={`chip-btn shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${val === '' ? 'bg-surface-high text-on-surface border border-outline-soft' : 'bg-white border border-outline-soft text-on-surface-muted hover:bg-surface-container'}`}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  </div>
 
   <!-- Featured -->
   {featured.length > 0 && (
-    <section class="mb-8">
-      <h2 class="font-serif text-lg font-bold text-on-surface mb-3">Recently added</h2>
-      <div class="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-none snap-x snap-mandatory">
+    <section class="mb-6">
+      <h2 class="font-serif text-lg font-bold text-on-surface mb-3">Featured</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {featured.map(r => (
-          <div class="snap-start">
-            <RecipeCard
-              slug={r.slug}
-              title={r.title}
-              category={r.category}
-              protein={r.protein}
-              cook_time_min={r.cook_time_min}
-            />
-          </div>
+          <a
+            href={`/recipes/${r.slug}`}
+            class="group block bg-primary-container rounded-2xl px-4 py-4 hover:brightness-[0.98] active:brightness-95 transition-all"
+          >
+            <h3 class="font-serif font-bold text-on-primary-container leading-snug group-hover:text-primary transition-colors">
+              {r.title}
+            </h3>
+            <p class="text-xs text-on-surface-muted mt-1.5">
+              {splitValues(r.category).slice(0, 1).map(c => toDisplayLabel(c))}
+              {r.cook_time_min && (
+                <span class="before:content-['·'] before:mx-1.5">{r.cook_time_min}&thinsp;min</span>
+              )}
+            </p>
+          </a>
         ))}
       </div>
     </section>
   )}
+
+  <!-- Filters -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
+    <label class="flex flex-col gap-1">
+      <span class="text-xs font-medium text-on-surface-muted">Category</span>
+      <select
+        id="filter-category"
+        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+      >
+        <option value="">All categories</option>
+        {categoryValues.map(v => (
+          <option value={v}>{toDisplayLabel(v)}</option>
+        ))}
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1">
+      <span class="text-xs font-medium text-on-surface-muted">Protein</span>
+      <select
+        id="filter-protein"
+        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+      >
+        <option value="">All proteins</option>
+        {proteinValues.map(v => (
+          <option value={v}>{toDisplayLabel(v)}</option>
+        ))}
+      </select>
+    </label>
+
+    <label class="flex flex-col gap-1">
+      <span class="text-xs font-medium text-on-surface-muted">Cook time</span>
+      <select
+        id="filter-time"
+        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+      >
+        <option value="">Any time</option>
+        <option value="under30">&lt; 30 min</option>
+        <option value="30to60">30–60 min</option>
+        <option value="over60">&gt; 60 min</option>
+      </select>
+    </label>
+  </div>
 
   <!-- All recipes -->
   <section>
@@ -232,37 +226,21 @@ const proteinValues = [...new Set(
     clearBtn.classList.toggle('hidden', !hasActive);
   }
 
-  // ── Chip clicks ──────────────────────────────────────────────────────────────
-  const GROUP_ACTIVE: Record<string, { bg: string; text: string }> = {
-    category: { bg: 'bg-primary',      text: 'text-on-primary' },
-    protein:  { bg: 'bg-secondary',    text: 'text-on-secondary' },
-    time:     { bg: 'bg-surface-high', text: 'text-on-surface' },
-  };
-  const INACTIVE_CLASSES = [
-    'bg-white', 'border', 'border-outline-soft', 'text-on-surface-muted', 'hover:bg-surface-container',
-  ];
+  // ── Dropdown changes ─────────────────────────────────────────────────────────
+  const categoryEl = document.getElementById('filter-category') as HTMLSelectElement;
+  const proteinEl  = document.getElementById('filter-protein')  as HTMLSelectElement;
+  const timeEl     = document.getElementById('filter-time')     as HTMLSelectElement;
 
-  document.querySelectorAll<HTMLButtonElement>('.chip-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const group = btn.dataset.group!;
-      const value = btn.dataset.chipValue!;
+  function syncFiltersFromSelects() {
+    activeFilters.category = categoryEl?.value ?? '';
+    activeFilters.protein  = proteinEl?.value  ?? '';
+    activeFilters.time     = timeEl?.value     ?? '';
+    applyFilters();
+  }
 
-      // Deactivate all chips in this group
-      document.querySelectorAll<HTMLButtonElement>(`.chip-btn[data-group="${group}"]`).forEach(b => {
-        const { bg, text } = GROUP_ACTIVE[group];
-        b.classList.remove(bg, text, 'border-none');
-        b.classList.add(...INACTIVE_CLASSES);
-      });
-
-      // Activate the clicked chip
-      const { bg, text } = GROUP_ACTIVE[group];
-      btn.classList.remove(...INACTIVE_CLASSES);
-      btn.classList.add(bg, text);
-
-      activeFilters[group] = value;
-      applyFilters();
-    });
-  });
+  categoryEl?.addEventListener('change', syncFiltersFromSelects);
+  proteinEl?.addEventListener('change', syncFiltersFromSelects);
+  timeEl?.addEventListener('change', syncFiltersFromSelects);
 
   // ── Search ───────────────────────────────────────────────────────────────────
   searchEl?.addEventListener('input', applyFilters);
@@ -270,29 +248,11 @@ const proteinValues = [...new Set(
   // ── Clear all ────────────────────────────────────────────────────────────────
   clearBtn?.addEventListener('click', () => {
     if (searchEl) searchEl.value = '';
+    if (categoryEl) categoryEl.value = '';
+    if (proteinEl)  proteinEl.value  = '';
+    if (timeEl)     timeEl.value     = '';
     Object.keys(activeFilters).forEach(k => { activeFilters[k] = ''; });
-
-    // Reset all chips to inactive, then re-activate the "All" chips
-    document.querySelectorAll<HTMLButtonElement>('.chip-btn').forEach(btn => {
-      btn.classList.remove(
-        'bg-primary', 'text-on-primary',
-        'bg-secondary', 'text-on-secondary',
-        'bg-surface-high', 'text-on-surface', 'border-none',
-      );
-      btn.classList.add(...INACTIVE_CLASSES);
-    });
-    document.querySelectorAll<HTMLButtonElement>('.chip-btn[data-chip-value=""]').forEach(btn => {
-      const group = btn.dataset.group!;
-      const { bg, text } = GROUP_ACTIVE[group];
-      btn.classList.remove(...INACTIVE_CLASSES);
-      btn.classList.add(bg, text);
-    });
-
     applyFilters();
   });
 </script>
 
-<style>
-  .scrollbar-none { scrollbar-width: none; }
-  .scrollbar-none::-webkit-scrollbar { display: none; }
-</style>

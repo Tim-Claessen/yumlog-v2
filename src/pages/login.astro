@@ -1,0 +1,86 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Log in">
+  <section class="max-w-sm mx-auto pt-8">
+    <h1 class="font-serif text-2xl font-bold text-on-surface mb-2">Log in</h1>
+    <p class="text-sm text-on-surface-muted mb-6">
+      Sign in to edit recipes and use the shopping list.
+    </p>
+
+    <form id="login-form" class="flex flex-col gap-4">
+      <label class="flex flex-col gap-1">
+        <span class="text-xs font-medium text-on-surface-muted">Email</span>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          autocomplete="email"
+          required
+          class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+        />
+      </label>
+
+      <label class="flex flex-col gap-1">
+        <span class="text-xs font-medium text-on-surface-muted">Password</span>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          autocomplete="current-password"
+          required
+          class="w-full bg-white border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
+        />
+      </label>
+
+      <p id="login-error" class="hidden text-sm text-primary" role="alert"></p>
+
+      <button
+        type="submit"
+        id="login-submit"
+        class="w-full bg-primary text-on-primary rounded-2xl px-4 py-3 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
+      >
+        Log in
+      </button>
+    </form>
+  </section>
+</Layout>
+
+<script>
+  import { supabase } from '../lib/supabase';
+  import { signIn } from '../lib/auth';
+
+  const redirect = new URLSearchParams(window.location.search).get('redirect') ?? '/';
+
+  const form = document.getElementById('login-form');
+  const errorEl = document.getElementById('login-error');
+  const submitBtn = document.getElementById('login-submit');
+
+  if (!form || !errorEl || !submitBtn) throw new Error('Login form elements missing');
+
+  // Already logged in — skip the form
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) window.location.href = redirect;
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    errorEl.classList.add('hidden');
+    submitBtn.disabled = true;
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      errorEl.textContent = error.message;
+      errorEl.classList.remove('hidden');
+      submitBtn.disabled = false;
+      return;
+    }
+
+    window.location.href = redirect;
+  });
+</script>

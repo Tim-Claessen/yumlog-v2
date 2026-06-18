@@ -1,0 +1,107 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Shopping list" activeNav="shopping">
+  <div id="auth-checking" class="text-on-surface-muted text-center py-20 text-sm">
+    Checking session…
+  </div>
+
+  <div id="auth-content" class="hidden">
+    <header class="flex items-baseline justify-between gap-4 mb-6">
+      <div>
+        <h1 class="font-serif text-2xl font-bold text-on-surface">Shopping list</h1>
+        <p class="text-sm text-on-surface-muted mt-1">Shared between Tim &amp; Zoe</p>
+      </div>
+      <button
+        type="button"
+        id="clear-checked"
+        class="hidden text-sm font-medium text-primary hover:underline shrink-0"
+      >
+        Clear checked
+      </button>
+    </header>
+
+    <!-- Manual add -->
+    <form
+      id="add-item-form"
+      class="bg-surface-low/80 rounded-2xl p-4 mb-6 flex flex-wrap gap-2 items-end"
+    >
+      <label class="flex flex-col gap-1 flex-1 min-w-[10rem]">
+        <span class="text-xs font-medium text-on-surface-muted">Ingredient</span>
+        <div class="relative">
+          <input
+            id="add-name"
+            type="text"
+            required
+            placeholder="e.g. mushrooms"
+            autocomplete="off"
+            class="w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-outline/70 focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+          />
+          <ul
+            id="add-name-suggestions"
+            class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"
+          ></ul>
+        </div>
+      </label>
+      <label class="flex flex-col gap-1 w-[4.25rem] shrink-0">
+        <span class="text-xs font-medium text-on-surface-muted">Qty</span>
+        <input
+          id="add-qty"
+          type="text"
+          inputmode="decimal"
+          placeholder="—"
+          class="w-full bg-surface-container/50 border border-transparent rounded-lg px-2 py-2 text-xs text-on-surface-muted text-right tabular-nums placeholder:text-outline/70 focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        />
+      </label>
+      <label class="flex flex-col gap-1 w-[4.25rem] shrink-0">
+        <span class="text-xs font-medium text-on-surface-muted">Unit</span>
+        <select
+          id="add-unit"
+          class="w-full bg-surface-container/50 border border-transparent rounded-lg px-1.5 py-2 text-xs text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        >
+          <option value="each">each</option>
+          <option value="g">g</option>
+          <option value="kg">kg</option>
+          <option value="ml">ml</option>
+          <option value="cup">cup</option>
+          <option value="tsp">tsp</option>
+          <option value="tbsp">tbsp</option>
+          <option value="pinch">pinch</option>
+          <option value="dash">dash</option>
+          <option value="sprig">sprig</option>
+          <option value="handful">handful</option>
+        </select>
+      </label>
+      <button
+        type="submit"
+        class="bg-primary text-on-primary rounded-2xl px-4 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity sm:mb-0"
+      >
+        Add
+      </button>
+    </form>
+
+    <p id="shopping-error" class="hidden text-sm text-primary mb-4" role="alert"></p>
+
+    <p id="shopping-empty" class="hidden text-on-surface-muted text-center py-16 text-sm">
+      Nothing on the list yet — add from a recipe or type an item above.
+    </p>
+
+    <ul id="shopping-list" class="flex flex-col"></ul>
+  </div>
+</Layout>
+
+<script>
+  import { requireAuth } from '../lib/auth';
+  import { initShoppingListUI } from '../lib/shopping-list-ui';
+
+  const checking = document.getElementById('auth-checking');
+  const content = document.getElementById('auth-content');
+
+  requireAuth().then(async ok => {
+    if (!ok || !checking || !content) return;
+    checking.classList.add('hidden');
+    content.classList.remove('hidden');
+    await initShoppingListUI();
+  });
+</script>
