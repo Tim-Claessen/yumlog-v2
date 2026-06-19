@@ -156,7 +156,7 @@ Store the result in `ingredient`. Keep the user's wording in `display_name`.
 - Stored as slug-style strings: `sweet_treat`, `nuts_seeds`, `grains_rice`.
 - **Never show the raw slug in the UI.** Always run through `toDisplayLabel()` from `src/lib/format.ts`, which replaces `_` and `-` with spaces and title-cases each word: `"sweet_treat"` → `"Sweet Treat"`.
 - `protein` may contain comma-separated values (`"chickpea, lentils"`). Use `splitValues()` from `src/lib/format.ts` to get individual values before rendering filter options or metadata.
-- **Category chip** (homepage list + recipe header): `bg-primary-container text-on-primary-container text-xs rounded-full px-2 py-0.5 font-medium`.
+- **Category chip** (main recipe list on homepage + recipe header): `bg-primary-container text-on-primary-container text-xs rounded-full px-2 py-0.5 font-medium`.
 - **Cook time** (homepage list + recipe header): `text-xs text-on-surface-muted`.
 - Unit `"each"` is **never shown** in the ingredient list — display `"3 garlic"` not `"3 each garlic"`.
 
@@ -218,7 +218,7 @@ The UI follows **Material Design 3** with a warm cookbook palette.
 
 ### Subtle input pattern
 
-Used for filters, search, shopping-list inline fields, and the manual-add form:
+Used for search, filter-panel selects, shopping-list inline fields, and the manual-add form:
 
 ```
 bg-surface-container/50 border border-transparent rounded-xl
@@ -247,10 +247,22 @@ Keep styling **minimal and text-forward** — no coloured section cards on recip
 
 #### Homepage (`index.astro`)
 
-- **Hero** — `bg-surface-low/80` block with tagline + search; search uses the subtle input pattern above.
-- **Featured** — hand-picked recipes above the filters. Slugs in `FEATURED_SLUGS` at the top of `index.astro` (currently `sourdough-bread`, `mixed-berry-muffins`, `mexican-rice-arroz-rojo`). Peach cards (`bg-primary-container rounded-2xl`) in a 3-column grid with title + muted category/cook time.
-- **Filters** — three `<select>` dropdowns (category, protein, cook time) using the subtle input pattern. Client-side filter script reads dropdown values.
-- **All recipes list** — title left; category chip + cook time right.
+All homepage interactivity lives in a single inline `<script>` at the bottom of `index.astro` (search, filters, hero scroll, featured visibility). No separate lib file.
+
+- **Sticky hero** (`#hero`) — `bg-surface-low/80 rounded-2xl`, `sticky top-16 z-10` (sits below the `h-16` app bar in `Layout.astro`). Contains:
+  - **Welcome intro** (`#hero-intro`) — tagline + serif headline + decorative icon. On **mobile only**, scroll-dismisses quickly: opacity/height/transform interpolate over ~40px with a steep cubic curve (`scrollY / 40` then `t³`). The search row stays pinned; hero padding compacts and gains `shadow-sm` once collapsed (~28px scroll).
+  - **Search row** — flex row: search input (`#search`, subtle input pattern) + **filter icon button** (`#filter-toggle`, 42×42, same subtle fill). Filter badge (`#filter-badge`) shows active filter **count** only when category/protein/cook-time filters are set — toggle `hidden`/`flex` in JS (never combine `hidden` + `inline-flex` on the same element).
+  - **Active filter chips** (`#active-filter-chips`) — removable peach pills rendered below the search row when filters are active (all breakpoints).
+- **Featured** (`#featured-section`) — hand-picked recipes above the full list. Slugs in `FEATURED_SLUGS` at the top of `index.astro` (currently `sourdough-bread`, `mixed-berry-muffins`, `mexican-rice-arroz-rojo`). Order in the array controls display order.
+  - **Layout** — full-width `grid grid-cols-3` (equal thirds on mobile and desktop). Title only on featured cards — **no** category chip or cook time (those stay on the main recipe list).
+  - **Cards** — `bg-primary-container`, `rounded-xl` (mobile) / `rounded-2xl` (sm+), compact `text-[11px]` / `text-sm` serif titles with `line-clamp-3`.
+  - **Visibility** — hidden while the user is searching, has active filters, or (mobile only) has scrolled past the welcome collapse.
+- **Filters** — unified panel for all breakpoints (no inline desktop dropdowns). Filter icon opens `#filter-panel`:
+  - **Mobile** — bottom sheet over a dimmed backdrop.
+  - **Desktop (`sm+`)** — centred dialog (`sm:max-w-md`, `rounded-2xl`).
+  - Three `<select>`s (category, protein, cook time) using the subtle input pattern. Header has **Clear filters** (visible only when filters active) and **Done**. Client-side script syncs selects → `activeFilters` → recipe list visibility.
+  - **All recipes header** — separate **Clear filters** link clears search + filter selects when anything is active.
+- **All recipes list** — title left; category chip + cook time right (unchanged from recipe list pattern).
 
 #### Recipe detail (`recipes/[slug].astro`)
 
@@ -358,7 +370,7 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
 /public/                 ← static assets (favicon, etc.)
 /src/
   /pages/
-    index.astro          ← homepage: hero, featured cards, filters, full list
+    index.astro          ← homepage: sticky hero, featured, filter panel, recipe list (inline client script)
     login.astro          ← email + password login
     create.astro         ← create/edit recipe form (auth-gated)
     shopping.astro       ← shared shopping list (auth-gated)

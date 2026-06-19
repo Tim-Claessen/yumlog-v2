@@ -34,9 +34,9 @@ const proteinValues = [...new Set(
 
 <Layout title="Yumlog" activeNav="recipes">
 
-  <!-- Hero + search -->
-  <section id="hero" class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6 sm:mb-6 sticky top-16 z-10 transition-all duration-300">
-    <div id="hero-intro" class="flex items-center justify-between gap-4 mb-5 transition-all duration-300">
+  <!-- Hero + search + filter (sticky) -->
+  <section id="hero" class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6 sm:mb-6 sticky top-16 z-10 transition-[padding,box-shadow,margin] duration-300">
+    <div id="hero-intro" class="flex items-center justify-between gap-4 mb-5 overflow-hidden will-change-[opacity,transform,max-height]">
       <div>
         <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Tim &amp; Zoe's kitchen</p>
         <h1 class="font-serif text-2xl font-bold text-on-surface leading-snug">
@@ -47,82 +47,77 @@ const proteinValues = [...new Set(
         <path d="M3 11l19-9-9 19-2-8-8-2z"/>
       </svg>
     </div>
-    <div class="relative">
-      <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline/70" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input
-        id="search"
-        type="search"
-        placeholder="Search recipes…"
-        autocomplete="off"
-        class="w-full bg-surface-container/50 border border-transparent rounded-xl pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-outline/70 focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
-      />
+    <div class="flex items-center gap-2">
+      <div class="relative flex-1 min-w-0">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline/70" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          id="search"
+          type="search"
+          placeholder="Search recipes…"
+          autocomplete="off"
+          class="w-full bg-surface-container/50 border border-transparent rounded-xl pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-outline/70 focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        />
+      </div>
+      <button
+        type="button"
+        id="filter-toggle"
+        class="relative shrink-0 inline-flex items-center justify-center size-[42px] bg-surface-container/50 border border-transparent rounded-xl text-on-surface-muted hover:text-on-surface hover:bg-surface-container focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        aria-expanded="false"
+        aria-controls="filter-panel"
+        aria-label="Filters"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
+        </svg>
+        <span id="filter-badge" class="hidden absolute -top-1 -right-1 min-w-[1.125rem] h-[1.125rem] px-1 rounded-full bg-primary text-on-primary text-[10px] font-medium items-center justify-center leading-none"></span>
+      </button>
     </div>
+    <div id="active-filter-chips" class="hidden flex flex-wrap gap-2 mt-2"></div>
   </section>
 
   <!-- Featured (hidden while searching, filtering, or scrolled on mobile) -->
   {featured.length > 0 && (
-    <section id="featured-section" class="mb-6 transition-all duration-300">
-      <h2 class="font-serif text-lg font-bold text-on-surface mb-3">Featured</h2>
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <section id="featured-section" class="mb-5 sm:mb-6 transition-all duration-300">
+      <h2 class="font-serif text-sm sm:text-lg font-bold text-on-surface mb-2 sm:mb-3">Featured</h2>
+      <div class="grid grid-cols-3 gap-2 sm:gap-3">
         {featured.map(r => (
           <a
             href={`/recipes/${r.slug}`}
-            class="group block bg-primary-container rounded-2xl px-4 py-4 hover:brightness-[0.98] active:brightness-95 transition-all"
+            class="group min-w-0 flex items-center bg-primary-container rounded-xl sm:rounded-2xl px-2.5 py-2.5 sm:px-4 sm:py-3.5 hover:brightness-[0.98] active:brightness-95 transition-all"
           >
-            <h3 class="font-serif font-bold text-on-primary-container leading-snug group-hover:text-primary transition-colors">
+            <h3 class="font-serif text-[11px] sm:text-sm font-bold text-on-primary-container leading-tight line-clamp-3 group-hover:text-primary transition-colors">
               {r.title}
             </h3>
-            <p class="text-xs text-on-surface-muted mt-1.5">
-              {splitValues(r.category).slice(0, 1).map(c => toDisplayLabel(c))}
-              {r.cook_time_min && (
-                <span class="before:content-['·'] before:mx-1.5">{r.cook_time_min}&thinsp;min</span>
-              )}
-            </p>
           </a>
         ))}
       </div>
     </section>
   )}
 
-  <!-- Mobile filters -->
-  <div class="sm:hidden mb-4">
-    <button
-      type="button"
-      id="filter-toggle"
-      class="inline-flex items-center gap-2 bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm font-medium text-on-surface-muted hover:text-on-surface hover:bg-surface-container transition-colors"
-      aria-expanded="false"
-      aria-controls="filter-panel"
-    >
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="10" y1="18" x2="14" y2="18"/>
-      </svg>
-      Filters
-      <span id="filter-badge" class="hidden min-w-[1.25rem] h-5 px-1.5 rounded-full bg-primary text-on-primary text-xs font-medium inline-flex items-center justify-center"></span>
-    </button>
-    <div id="active-filter-chips" class="hidden flex flex-wrap gap-2 mt-2"></div>
-  </div>
-
-  <!-- Mobile filter panel -->
+  <!-- Filter panel -->
   <div
     id="filter-panel"
-    class="hidden sm:hidden fixed inset-0 z-30"
+    class="hidden fixed inset-0 z-30"
     role="dialog"
     aria-modal="true"
     aria-labelledby="filter-panel-title"
   >
     <div class="absolute inset-0 bg-on-surface/20" id="filter-panel-backdrop"></div>
-    <div class="absolute inset-x-0 bottom-0 bg-surface rounded-t-2xl border-t border-outline-soft shadow-xl max-h-[85vh] overflow-y-auto">
+    <div class="absolute inset-x-0 bottom-0 sm:bottom-auto sm:top-1/2 sm:-translate-y-1/2 sm:max-w-md sm:mx-auto bg-surface rounded-t-2xl sm:rounded-2xl border-t sm:border border-outline-soft shadow-xl max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between px-4 py-3 border-b border-outline-soft/60">
         <h2 id="filter-panel-title" class="font-serif text-lg font-bold text-on-surface">Filters</h2>
-        <button type="button" id="filter-panel-close" class="text-sm font-medium text-primary px-2 py-1">Done</button>
+        <div class="flex items-center gap-1">
+          <button type="button" id="filter-panel-clear" class="hidden text-sm font-medium text-primary px-2 py-1">Clear filters</button>
+          <button type="button" id="filter-panel-close" class="text-sm font-medium text-primary px-2 py-1">Done</button>
+        </div>
       </div>
       <div class="p-4 flex flex-col gap-4">
         <label class="flex flex-col gap-1">
           <span class="text-xs font-medium text-on-surface-muted">Category</span>
           <select
-            id="filter-category-mobile"
+            id="filter-category"
             class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
           >
             <option value="">All categories</option>
@@ -134,7 +129,7 @@ const proteinValues = [...new Set(
         <label class="flex flex-col gap-1">
           <span class="text-xs font-medium text-on-surface-muted">Protein</span>
           <select
-            id="filter-protein-mobile"
+            id="filter-protein"
             class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
           >
             <option value="">All proteins</option>
@@ -146,7 +141,7 @@ const proteinValues = [...new Set(
         <label class="flex flex-col gap-1">
           <span class="text-xs font-medium text-on-surface-muted">Cook time</span>
           <select
-            id="filter-time-mobile"
+            id="filter-time"
             class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
           >
             <option value="">Any time</option>
@@ -157,48 +152,6 @@ const proteinValues = [...new Set(
         </label>
       </div>
     </div>
-  </div>
-
-  <!-- Desktop filters -->
-  <div class="hidden sm:grid grid-cols-3 gap-3 mb-5">
-    <label class="flex flex-col gap-1">
-      <span class="text-xs font-medium text-on-surface-muted">Category</span>
-      <select
-        id="filter-category"
-        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
-      >
-        <option value="">All categories</option>
-        {categoryValues.map(v => (
-          <option value={v}>{toDisplayLabel(v)}</option>
-        ))}
-      </select>
-    </label>
-
-    <label class="flex flex-col gap-1">
-      <span class="text-xs font-medium text-on-surface-muted">Protein</span>
-      <select
-        id="filter-protein"
-        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
-      >
-        <option value="">All proteins</option>
-        {proteinValues.map(v => (
-          <option value={v}>{toDisplayLabel(v)}</option>
-        ))}
-      </select>
-    </label>
-
-    <label class="flex flex-col gap-1">
-      <span class="text-xs font-medium text-on-surface-muted">Cook time</span>
-      <select
-        id="filter-time"
-        class="filter-select w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
-      >
-        <option value="">Any time</option>
-        <option value="under30">&lt; 30 min</option>
-        <option value="30to60">30–60 min</option>
-        <option value="over60">&gt; 60 min</option>
-      </select>
-    </label>
   </div>
 
   <!-- All recipes -->
@@ -278,14 +231,12 @@ const proteinValues = [...new Set(
   const filterChips = document.getElementById('active-filter-chips');
   const filterPanel = document.getElementById('filter-panel');
   const filterToggle = document.getElementById('filter-toggle');
+  const filterPanelClear = document.getElementById('filter-panel-clear');
   const rows       = listEl ? Array.from(listEl.querySelectorAll<HTMLLIElement>('li')) : [];
 
   const categoryEl = document.getElementById('filter-category') as HTMLSelectElement;
   const proteinEl  = document.getElementById('filter-protein')  as HTMLSelectElement;
   const timeEl     = document.getElementById('filter-time')     as HTMLSelectElement;
-  const categoryMobile = document.getElementById('filter-category-mobile') as HTMLSelectElement;
-  const proteinMobile  = document.getElementById('filter-protein-mobile')  as HTMLSelectElement;
-  const timeMobile     = document.getElementById('filter-time-mobile')     as HTMLSelectElement;
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
   function matchesMulti(stored: string, filterValue: string): boolean {
@@ -299,10 +250,11 @@ const proteinValues = [...new Set(
     return opt?.textContent?.trim() ?? value;
   }
 
-  function syncSelectPairs() {
-    if (categoryEl && categoryMobile) categoryMobile.value = categoryEl.value;
-    if (proteinEl && proteinMobile) proteinMobile.value = proteinEl.value;
-    if (timeEl && timeMobile) timeMobile.value = timeEl.value;
+  function syncFiltersFromSelects() {
+    activeFilters.category = categoryEl?.value ?? '';
+    activeFilters.protein  = proteinEl?.value  ?? '';
+    activeFilters.time     = timeEl?.value     ?? '';
+    applyFilters();
   }
 
   function updateActiveChips() {
@@ -314,8 +266,14 @@ const proteinValues = [...new Set(
     if (time)     chips.push({ key: 'time',     label: TIME_LABELS[time] ?? time });
 
     const count = chips.length;
-    filterBadge?.classList.toggle('hidden', count === 0);
-    if (filterBadge) filterBadge.textContent = count > 0 ? String(count) : '';
+    if (filterBadge) {
+      filterBadge.textContent = count > 0 ? String(count) : '';
+      filterBadge.classList.toggle('hidden', count === 0);
+      filterBadge.classList.toggle('flex', count > 0);
+    }
+
+    const hasFilterSelects = Boolean(category || protein || time);
+    filterPanelClear?.classList.toggle('hidden', !hasFilterSelects);
 
     if (!filterChips) return;
     filterChips.innerHTML = '';
@@ -333,23 +291,62 @@ const proteinValues = [...new Set(
       btn.setAttribute('aria-label', `Remove ${chip.label} filter`);
       btn.addEventListener('click', () => {
         activeFilters[chip.key] = '';
-        if (chip.key === 'category') {
-          if (categoryEl) categoryEl.value = '';
-          if (categoryMobile) categoryMobile.value = '';
-        } else if (chip.key === 'protein') {
-          if (proteinEl) proteinEl.value = '';
-          if (proteinMobile) proteinMobile.value = '';
-        } else if (chip.key === 'time') {
-          if (timeEl) timeEl.value = '';
-          if (timeMobile) timeMobile.value = '';
-        }
+        if (chip.key === 'category' && categoryEl) categoryEl.value = '';
+        else if (chip.key === 'protein' && proteinEl) proteinEl.value = '';
+        else if (chip.key === 'time' && timeEl) timeEl.value = '';
         applyFilters();
       });
       filterChips.appendChild(btn);
     }
   }
 
+  const HERO_DISMISS_PX = 40;
   let heroCollapsed = false;
+  let heroIntroFullHeight = 0;
+
+  /** Steep curve — welcome copy is mostly gone in the first ~25px of scroll. */
+  function heroDismissProgress(scrollY: number): number {
+    const linear = Math.min(1, Math.max(0, scrollY / HERO_DISMISS_PX));
+    return linear * linear * linear;
+  }
+
+  function measureHeroIntro() {
+    if (!heroIntro) return;
+    heroIntro.style.maxHeight = 'none';
+    heroIntro.style.opacity = '1';
+    heroIntro.style.transform = 'none';
+    heroIntro.style.marginBottom = '';
+    heroIntro.style.visibility = 'visible';
+    heroIntroFullHeight = heroIntro.scrollHeight;
+  }
+
+  function resetHeroIntroStyles() {
+    if (!heroIntro) return;
+    heroIntro.style.opacity = '';
+    heroIntro.style.transform = '';
+    heroIntro.style.maxHeight = '';
+    heroIntro.style.marginBottom = '';
+    heroIntro.style.visibility = '';
+    heroIntro.style.pointerEvents = '';
+  }
+
+  function setHeroScrollFade(scrollY: number) {
+    const t = heroDismissProgress(scrollY);
+    if (!heroIntro || heroIntroFullHeight === 0) return;
+
+    heroIntro.style.opacity = String(1 - t);
+    heroIntro.style.transform = `translateY(${-t * 12}px)`;
+    heroIntro.style.maxHeight = `${heroIntroFullHeight * (1 - t)}px`;
+    heroIntro.style.marginBottom = `${20 * (1 - t)}px`;
+    heroIntro.style.pointerEvents = t >= 1 ? 'none' : '';
+    heroIntro.style.visibility = t >= 0.98 ? 'hidden' : 'visible';
+
+    const collapsed = scrollY >= 28;
+    if (collapsed !== heroCollapsed) {
+      heroCollapsed = collapsed;
+      updateBrowsingUI();
+    }
+  }
 
   function updateBrowsingUI() {
     const query = searchEl?.value.trim() ?? '';
@@ -358,14 +355,12 @@ const proteinValues = [...new Set(
 
     featuredEl?.classList.toggle('hidden', isBrowsing || heroCollapsed);
 
-    if (heroEl && heroIntro) {
+    if (heroEl) {
       heroEl.classList.toggle('py-3', heroCollapsed);
       heroEl.classList.toggle('py-6', !heroCollapsed);
       heroEl.classList.toggle('mb-3', heroCollapsed);
       heroEl.classList.toggle('mb-6', !heroCollapsed);
       heroEl.classList.toggle('shadow-sm', heroCollapsed);
-      heroIntro.classList.toggle('hidden', heroCollapsed);
-      heroIntro.classList.toggle('mb-5', !heroCollapsed);
     }
   }
 
@@ -397,20 +392,13 @@ const proteinValues = [...new Set(
     updateBrowsingUI();
   }
 
-  function syncFiltersFromSelects(source?: 'desktop' | 'mobile') {
-    if (source === 'mobile') {
-      activeFilters.category = categoryMobile?.value ?? '';
-      activeFilters.protein  = proteinMobile?.value  ?? '';
-      activeFilters.time     = timeMobile?.value     ?? '';
-      if (categoryEl) categoryEl.value = activeFilters.category;
-      if (proteinEl)  proteinEl.value  = activeFilters.protein;
-      if (timeEl)     timeEl.value     = activeFilters.time;
-    } else {
-      activeFilters.category = categoryEl?.value ?? '';
-      activeFilters.protein  = proteinEl?.value  ?? '';
-      activeFilters.time     = timeEl?.value     ?? '';
-      syncSelectPairs();
-    }
+  function clearFilterSelects() {
+    if (categoryEl) categoryEl.value = '';
+    if (proteinEl)  proteinEl.value  = '';
+    if (timeEl)     timeEl.value     = '';
+    activeFilters.category = '';
+    activeFilters.protein  = '';
+    activeFilters.time     = '';
     applyFilters();
   }
 
@@ -418,6 +406,7 @@ const proteinValues = [...new Set(
     filterPanel?.classList.remove('hidden');
     filterToggle?.setAttribute('aria-expanded', 'true');
     document.body.classList.add('overflow-hidden');
+    updateActiveChips();
   }
 
   function closeFilterPanel() {
@@ -426,14 +415,12 @@ const proteinValues = [...new Set(
     document.body.classList.remove('overflow-hidden');
   }
 
-  categoryEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
-  proteinEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
-  timeEl?.addEventListener('change', () => syncFiltersFromSelects('desktop'));
-  categoryMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
-  proteinMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
-  timeMobile?.addEventListener('change', () => syncFiltersFromSelects('mobile'));
+  categoryEl?.addEventListener('change', syncFiltersFromSelects);
+  proteinEl?.addEventListener('change', syncFiltersFromSelects);
+  timeEl?.addEventListener('change', syncFiltersFromSelects);
 
   filterToggle?.addEventListener('click', openFilterPanel);
+  filterPanelClear?.addEventListener('click', clearFilterSelects);
   document.getElementById('filter-panel-close')?.addEventListener('click', closeFilterPanel);
   document.getElementById('filter-panel-backdrop')?.addEventListener('click', closeFilterPanel);
 
@@ -441,36 +428,31 @@ const proteinValues = [...new Set(
 
   clearBtn?.addEventListener('click', () => {
     if (searchEl) searchEl.value = '';
-    if (categoryEl) categoryEl.value = '';
-    if (proteinEl)  proteinEl.value  = '';
-    if (timeEl)     timeEl.value     = '';
-    if (categoryMobile) categoryMobile.value = '';
-    if (proteinMobile)  proteinMobile.value  = '';
-    if (timeMobile)     timeMobile.value     = '';
-    Object.keys(activeFilters).forEach(k => { activeFilters[k] = ''; });
-    applyFilters();
+    clearFilterSelects();
   });
 
-  // Collapse hero on mobile scroll so results get more room
+  // Fade welcome copy on mobile scroll; search + filter stay pinned
   const mobileMq = window.matchMedia('(max-width: 639px)');
   function onScroll() {
     if (!mobileMq.matches) {
+      resetHeroIntroStyles();
       if (heroCollapsed) {
         heroCollapsed = false;
         updateBrowsingUI();
       }
       return;
     }
-    const next = window.scrollY > 72;
-    if (next !== heroCollapsed) {
-      heroCollapsed = next;
-      updateBrowsingUI();
-    }
+    setHeroScrollFade(window.scrollY);
   }
   window.addEventListener('scroll', onScroll, { passive: true });
-  mobileMq.addEventListener('change', onScroll);
+  mobileMq.addEventListener('change', () => {
+    measureHeroIntro();
+    onScroll();
+  });
+  window.addEventListener('resize', measureHeroIntro);
+  measureHeroIntro();
+  onScroll();
 
-  syncSelectPairs();
   applyFilters();
 </script>
 
