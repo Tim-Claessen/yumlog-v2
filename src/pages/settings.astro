@@ -1,0 +1,90 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+/** Evaluated once at build time — reflects when static pages were last published. */
+const buildPublishedIso = new Date().toISOString();
+---
+
+<Layout title="Settings" activeNav="settings">
+  <div id="auth-checking" class="text-on-surface-muted text-center py-20 text-sm">
+    Checking session…
+  </div>
+
+  <div id="auth-content" class="hidden">
+    <header class="mb-6">
+      <h1 class="font-serif text-2xl font-bold text-on-surface mb-1">Settings</h1>
+      <p class="text-sm text-on-surface-muted">Site status for Tim &amp; Zoe</p>
+    </header>
+
+    <section class="bg-surface-low/80 rounded-2xl divide-y divide-outline-soft/60">
+      <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
+        <div>
+          <h2 class="text-sm font-medium text-on-surface">Website last published</h2>
+          <p class="text-xs text-on-surface-muted mt-0.5">When recipe pages were last built and deployed</p>
+        </div>
+        <time
+          id="build-published"
+          datetime={buildPublishedIso}
+          class="text-sm text-on-surface-muted tabular-nums shrink-0"
+        >
+          Loading…
+        </time>
+      </div>
+
+      <div class="px-5 py-4 flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1 sm:gap-4">
+        <div>
+          <h2 class="text-sm font-medium text-on-surface">Shopping list last changed</h2>
+          <p class="text-xs text-on-surface-muted mt-0.5">Most recent edit to the shared list</p>
+        </div>
+        <p id="shopping-last-changed" class="text-sm text-on-surface-muted tabular-nums shrink-0">
+          Loading…
+        </p>
+      </div>
+
+      <a
+        href="/settings/ingredients"
+        class="px-5 py-4 flex items-center justify-between gap-4 hover:bg-surface-container/40 transition-colors group"
+      >
+        <div>
+          <h2 class="text-sm font-medium text-on-surface group-hover:text-primary transition-colors">Ingredient registry</h2>
+          <p class="text-xs text-on-surface-muted mt-0.5">Canonical names and shopping sections</p>
+        </div>
+        <span class="text-sm text-on-surface-muted group-hover:text-primary transition-colors shrink-0" aria-hidden="true">→</span>
+      </a>
+    </section>
+  </div>
+</Layout>
+
+<script>
+  import { requireAuth } from '../lib/auth';
+  import { fetchShoppingListLastChanged, formatSettingsTimestamp } from '../lib/settings';
+
+  const checking = document.getElementById('auth-checking');
+  const content = document.getElementById('auth-content');
+  const buildEl = document.getElementById('build-published');
+  const shoppingEl = document.getElementById('shopping-last-changed');
+
+  const buildIso = buildEl?.getAttribute('datetime');
+  if (buildEl && buildIso) {
+    buildEl.textContent = formatSettingsTimestamp(buildIso);
+  }
+
+  requireAuth().then(async ok => {
+    if (!ok || !checking || !content) return;
+    checking.classList.add('hidden');
+    content.classList.remove('hidden');
+
+    if (!shoppingEl) return;
+
+    try {
+      const iso = await fetchShoppingListLastChanged();
+      if (!iso) {
+        shoppingEl.textContent = 'No changes yet';
+        return;
+      }
+      shoppingEl.textContent = formatSettingsTimestamp(iso);
+    } catch {
+      shoppingEl.textContent = 'Unable to load';
+    }
+  });
+</script>

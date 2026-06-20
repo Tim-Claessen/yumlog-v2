@@ -3,7 +3,7 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'recipes' | 'shopping' | 'create';
+  activeNav?: 'recipes' | 'shopping' | 'create' | 'settings';
 }
 
 const { title = 'Yumlog', activeNav = 'recipes' } = Astro.props;
@@ -17,6 +17,12 @@ const authNavItems = [
   { id: 'shopping', href: '/shopping', label: 'Shopping' },
   { id: 'create',   href: '/create',   label: 'Create' },
 ] as const;
+
+const settingsNavItem = {
+  id: 'settings',
+  href: '/settings',
+  label: 'Settings',
+} as const;
 ---
 <!doctype html>
 <html lang="en">
@@ -65,6 +71,18 @@ const authNavItems = [
               {item.label}
             </a>
           ))}
+          <a
+            href={settingsNavItem.href}
+            data-nav-auth
+            class={[
+              'hidden px-4 py-2 rounded-full text-sm font-medium transition-colors',
+              activeNav === settingsNavItem.id
+                ? 'bg-primary-container text-on-primary-container'
+                : 'text-on-surface-muted hover:bg-surface-container',
+            ].join(' ')}
+          >
+            {settingsNavItem.label}
+          </a>
           <a
             href="/login"
             data-nav-guest
@@ -137,6 +155,19 @@ const authNavItems = [
             </a>
           );
         })}
+        <a
+          href={settingsNavItem.href}
+          data-nav-auth
+          class={[
+            'hidden flex-1 flex flex-col items-center py-3 gap-0.5 text-xs font-medium transition-colors',
+            activeNav === settingsNavItem.id ? 'text-primary' : 'text-on-surface-muted',
+          ].join(' ')}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          <span>{settingsNavItem.label}</span>
+        </a>
         <a
           href="/login"
           data-nav-guest

@@ -24,6 +24,7 @@ A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of
 2. **Client-side for auth** — login session check and nav gating (authenticated only).
 3. **Client-side for writes** — adding/editing recipes (authenticated only).
 4. **Client-side for the shopping list** — read and write (authenticated only).
+5. **Client-side for settings** — site status and ingredient registry (authenticated only); no build-time DB reads for user-specific data.
 
 If a feature would make recipe pages depend on Supabase at request time, reject that approach.
 
@@ -36,8 +37,8 @@ If a feature would make recipe pages depend on Supabase at request time, reject 
 - **Login:** `/login` — email + password via `signInWithPassword`. Redirects to `?redirect=` on success (defaults to `/`).
 - **Session:** client-side only — Supabase persisted session in the browser. No SSR.
 - **Guests see:** Recipes nav + Log in. Recipe pages are fully public.
-- **Logged-in users see:** Recipes, Shopping, Create, Sign out; edit controls on recipe pages.
-- **Protected pages:** `/shopping`, `/create` — client-side `requireAuth()` redirects to login if no session.
+- **Logged-in users see:** Recipes, Shopping, Create, Settings, Sign out; edit controls on recipe pages.
+- **Protected pages:** `/shopping`, `/create`, `/settings`, `/settings/ingredients` — client-side `requireAuth()` redirects to login if no session.
 - Public sign-ups are **disabled** in Supabase Auth. Only manually-added accounts (Tim + Zoe) can log in.
 
 ### Astro client-script gotcha
@@ -60,7 +61,8 @@ create table recipes (
   tips           text,            -- one tip per line; null when absent
   substitutions  text,            -- one substitution per line; null when absent
   source_url     text,
-  created_at     timestamptz default now()
+  created_at     timestamptz default now(),
+  updated_at     timestamptz not null default now()  -- bumped to trigger rebuilds (see Deployment)
 );
 
 -- Canonical ingredient registry (one row per normalised name)
@@ -87,18 +89,47 @@ create table shopping_list (
   unit        text,                 -- canonical unit after conversion, e.g. 'g' or 'each'
   checked     boolean not null default false,
   position    integer,              -- global order; grouped display derives from category + position
-  added_at    timestamptz default now()
+  added_at    timestamptz default now(),
+  updated_at  timestamptz not null default now()
 );
 ```
 
 `ingredients.category` is constrained in Postgres to one of eleven fixed aisle values (see **Ingredient shopping sections** below), or `null`.
 
-> **Pending migration** — run this once in the Supabase SQL editor if `tips`/`substitutions` columns don't yet exist:
+> **Pending migrations** — run once in the Supabase SQL editor as needed:
+>
+> `tips` / `substitutions` on recipes (if missing):
 > ```sql
 > alter table recipes add column if not exists tips          text;
 > alter table recipes add column if not exists substitutions text;
 > ```
 > Then re-run `scripts/migrate-legacy.mjs` (with service-role key) to populate all three text fields.
+>
+> `shopping_list.updated_at` + auto-touch on row update:
+> ```sql
+> alter table shopping_list
+>   add column if not exists updated_at timestamptz not null default now();
+>
+> update shopping_list
+> set updated_at = coalesce(added_at, now())
+> where updated_at is null or updated_at = now();
+>
+> create or replace function shopping_list_set_updated_at()
+> returns trigger language plpgsql as $$
+> begin
+>   new.updated_at := now();
+>   return new;
+> end;
+> $$;
+>
+> drop trigger if exists shopping_list_set_updated_at on shopping_list;
+> create trigger shopping_list_set_updated_at
+>   before update on shopping_list
+>   for each row execute function shopping_list_set_updated_at();
+> ```
+>
+> Ingredient registry admin (merge RPC + rebuild touch) — **`scripts/ingredient-registry-rpc.sql`**:
+> adds `recipes.updated_at` (if missing), `touch_recipes_for_ingredient()`, and `merge_ingredients()`. Required for merge and auto-rebuild after canonical renames.
 
 ### Row-level security
 
@@ -109,7 +140,8 @@ create table shopping_list (
 ### Key design decisions
 
 - Primary keys are **slugs**, not UUIDs. Slugs are generated from the title on **create** (`titleToSlug()` in `src/lib/slug.ts` — hyphen-separated, e.g. `mixed-berry-muffins`) and **never change on edit**, even if the title is updated.
-- **Canonical ingredients** live in `ingredients` (one row per normalised name). `recipe_ingredients.ingredient` and `shopping_list.ingredient` are FKs to `ingredients.name` (`on update cascade`, `on delete restrict` — cannot delete a canonical name still referenced by a recipe).
+- **Canonical ingredients** live in `ingredients` (one row per normalised name). `recipe_ingredients.ingredient` and `shopping_list.ingredient` are FKs to `ingredients.name` (`on update cascade`, `on delete restrict` — cannot delete a canonical name still referenced by a recipe or shopping row).
+- **`ingredients` has no unit column** — units live on `recipe_ingredients` and `shopping_list`; conversion happens in app code at shopping-list roll-up time (`src/lib/units.ts`), not on the registry row.
 - On recipe save or manual shopping-list add, **upsert** new names into `ingredients` before inserting child rows. Brand-new names require a shopping **category** (modal prompt); existing names keep their stored category silently.
 - Public sign-ups are **disabled** in Supabase Auth. Only manually-added accounts (Tim + Zoe) can log in.
 
@@ -166,6 +198,19 @@ Fixed aisle categories on `ingredients.category` (lowercase strings, CHECK-const
 **Null category** — ingredient exists for recipes but is excluded from shopping-list roll-up (e.g. `water`, `liquid from chickpea can`). Do not delete these rows; filter at the app layer when adding to the shopping list.
 
 Display labels via `sectionDisplayLabel()` (title-case words). Do not confuse with **recipe** `category` (slug-style `sweet_treat`, etc.) — different concept.
+
+### Ingredient registry admin (`/settings/ingredients`)
+
+Auth-gated dedicated screen (not embedded in `/settings`). Edits **`ingredients` only** — never `recipe_ingredients` lines.
+
+- **List** — fixed-column table: bold canonical name, shopping section (or “Not shopped”), recipe count, **View recipes** link (read-only modal with title links), **Edit** button per row.
+- **Edit dialog** — change `name` and/or `category`; explicit confirm flows for rename, merge, and delete.
+- **Rename** — single `UPDATE ingredients SET name = …`; FK `on update cascade` repoints `recipe_ingredients` and `shopping_list`. Confirm shows affected recipe count. Calls `touch_recipes_for_ingredient()` RPC so the `recipes` webhook fires a rebuild.
+- **Merge** (rename collides with existing name) — `merge_ingredients()` RPC: reassigns all references to survivor, merges shopping rows by unit, deletes duplicate; confirm required.
+- **Delete** — only when zero recipe lines **and** zero shopping rows; DB `on delete restrict` as backstop.
+- **Category-only edit** — no site rebuild (shopping list reads category client-side; static recipe pages use `display_name`).
+
+Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: `scripts/ingredient-registry-rpc.sql`.
 
 ### Display pluralisation (recipe detail only)
 
@@ -311,12 +356,19 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 - Auth-gated. Manual-add panel (`bg-surface-low/80`). Grouped or flat list (see **Shopping list UI** above). M3 section headers when grouped; terracotta accent on checkbox switch and primary actions.
 
+#### Settings (`settings.astro`, `settings/ingredients.astro`)
+
+Auth-gated static shells; all Supabase reads/writes client-side after `requireAuth()`.
+
+- **`/settings`** — site status panel: **Website last published** (build timestamp baked into HTML at deploy, formatted client-side via `formatSettingsTimestamp()` in `settings.ts`, locale `en-AU`); **Shopping list last changed** (`max(shopping_list.updated_at)` after migration); link row to ingredient registry.
+- **`/settings/ingredients`** — canonical ingredient registry admin (see **Ingredient registry admin** above).
+
 ### Navigation
 
 - **Guests (desktop + mobile):** Recipes + Log in.
-- **Logged in:** Recipes, Shopping, Create + Sign out (desktop header).
-- **Mobile:** fixed bottom nav — same items as above.
-- Pass `activeNav` prop to `Layout.astro` to highlight the current tab.
+- **Logged in:** Recipes, Shopping, Create, **Settings** (last auth item, before Sign out on desktop) + Sign out.
+- **Mobile:** fixed bottom nav — same items; Settings uses gear icon.
+- Pass `activeNav` prop to `Layout.astro` to highlight the current tab (`recipes` | `shopping` | `create` | `settings`).
 
 ---
 
@@ -375,7 +427,9 @@ Recipes are pre-rendered at build time (see **Critical rendering rule**). After 
 | Method | POST |
 | URL | Cloudflare deploy hook URL |
 
-Hook `recipes` only — not `recipe_ingredients` or `shopping_list`. Every save touches `recipes` first; ingredients are written milliseconds later, well before the queued build fetches data. Shopping list is client-side only and does not need rebuilds.
+Hook `recipes` only — not `recipe_ingredients`, `ingredients`, or `shopping_list`. Every recipe save touches `recipes` first; ingredients are written milliseconds later, well before the queued build fetches data. Shopping list is client-side only and does not need rebuilds.
+
+**Ingredient registry rebuilds** — category-only edits do **not** trigger a rebuild. **Rename** and **merge** call `touch_recipes_for_ingredient()` (in `scripts/ingredient-registry-rpc.sql`) to bump `recipes.updated_at` on affected slugs, firing the same webhook. Without that RPC, renames still cascade in the DB but static pages won't redeploy until the next git push.
 
 Treat the deploy hook URL like a password. Test with `curl -X POST "<hook-url>"` or by saving a recipe and checking webhook logs (Supabase) and **Deployments** (Cloudflare).
 
@@ -393,7 +447,8 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
   .env                   ← Supabase URL + anon key (gitignored)
 /legacy/                 ← old Jekyll site — source of truth for recipe migration
 /scripts/
-  migrate-legacy.mjs     ← one-off migration: Jekyll → Supabase (upserts ingredients, then recipe_ingredients)
+  migrate-legacy.mjs           ← one-off migration: Jekyll → Supabase (upserts ingredients, then recipe_ingredients)
+  ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
 /public/                 ← static assets (favicon, etc.)
 /src/
   /pages/
@@ -401,6 +456,9 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
     login.astro          ← email + password login
     create.astro         ← create/edit recipe form (auth-gated)
     shopping.astro       ← shared shopping list (auth-gated)
+    settings.astro       ← site status (auth-gated)
+    /settings/
+      ingredients.astro  ← canonical ingredient registry admin (auth-gated)
     /recipes/
       [slug].astro       ← static recipe detail (getStaticPaths at build time)
   /layouts/
@@ -414,6 +472,9 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
     ingredient-sections.ts     ← INGREDIENT_SECTION_ORDER, sectionDisplayLabel, sectionSortIndex
     ingredient-category-prompt.ts ← M3 modal: pick aisle for new canonical ingredients
     ingredient-autocomplete.ts ← shared autocomplete wiring for ingredient inputs
+    ingredient-registry.ts     ← fetch/edit canonical ingredients, reference counts, rename/merge/delete
+    ingredient-registry-ui.ts  ← registry table UI, edit/confirm dialogs, “used in” modal
+    settings.ts                ← shopping list last-changed fetch; shared timestamp formatting
     units.ts                   ← shopping-list unit conversion
     recipe-editor.ts           ← load/save recipe, ingredients registry, category upsert, autocomplete
     recipe-form-ui.ts          ← create/edit form DOM wiring, new-ingredient prompt on submit

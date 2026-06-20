@@ -1,0 +1,54 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="Ingredient registry" activeNav="settings">
+  <div id="auth-checking" class="text-on-surface-muted text-center py-20 text-sm">
+    Checking session…
+  </div>
+
+  <div id="auth-content" class="hidden">
+    <header class="mb-6">
+      <a href="/settings" class="text-sm font-medium text-on-surface-muted hover:text-primary transition-colors">
+        ← Settings
+      </a>
+      <h1 class="font-serif text-2xl font-bold text-on-surface mt-3 mb-1">Ingredient registry</h1>
+      <p class="text-sm text-on-surface-muted leading-relaxed max-w-2xl">
+        Edit canonical ingredient names and shopping sections only. Recipe lines are not edited here — use
+        <strong class="font-medium text-on-surface">Used in</strong> to view which recipes reference each name.
+      </p>
+    </header>
+
+    <div class="mb-4">
+      <label class="flex flex-col gap-1">
+        <span class="text-xs font-medium text-on-surface-muted">Search</span>
+        <input
+          id="ingredient-search"
+          type="search"
+          placeholder="Filter by name…"
+          autocomplete="off"
+          class="w-full bg-surface-container/50 border border-transparent rounded-xl px-3 py-2.5 text-sm text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        />
+      </label>
+    </div>
+
+    <p id="registry-status" class="text-sm text-on-surface-muted mb-4" aria-live="polite"></p>
+
+    <div id="ingredient-registry-list"></div>
+  </div>
+</Layout>
+
+<script>
+  import { requireAuth } from '../../lib/auth';
+  import { initIngredientRegistryUI } from '../../lib/ingredient-registry-ui';
+
+  const checking = document.getElementById('auth-checking');
+  const content = document.getElementById('auth-content');
+
+  requireAuth().then(async ok => {
+    if (!ok || !checking || !content) return;
+    checking.classList.add('hidden');
+    content.classList.remove('hidden');
+    await initIngredientRegistryUI();
+  });
+</script>
