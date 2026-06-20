@@ -3,34 +3,85 @@ import {
   clearAllItems,
   clearChecked,
   deleteItem,
+  ensureIngredientForShopping,
+  fetchIngredientRegistry,
   fetchShoppingList,
+  lookupIngredientCategory,
   setItemOrder,
   subscribeShoppingList,
   updateItem,
   type ShoppingItem,
 } from './shopping-list';
-import { fetchKnownIngredients } from './recipe-editor';
+import { fetchShoppableIngredients } from './recipe-editor';
 import { wireIngredientAutocomplete } from './ingredient-autocomplete';
+import { promptIngredientCategories } from './ingredient-category-prompt';
+import { normalizeIngredient } from './ingredient';
+import {
+  INGREDIENT_SECTION_ORDER,
+  sectionDisplayLabel,
+  type IngredientSection,
+} from './ingredient-sections';
+import { collectOrderedIds, setupShoppingListDrag } from './shopping-list-drag';
 
 /** Soft inline fields — no stark white boxes. */
 const inputSubtle =
-  'bg-surface-container/50 border border-transparent rounded-lg px-2 py-1 text-xs text-on-surface-muted placeholder:text-outline/70 focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors';
+  'bg-surface-container/50 border border-transparent rounded-lg px-2 py-1.5 text-xs text-on-surface-muted placeholder:text-outline/70 focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors';
 
 const selectSubtle =
-  'bg-surface-container/50 border border-transparent rounded-lg px-1.5 py-1 text-xs text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors';
+  'bg-surface-container/50 border border-transparent rounded-lg px-1.5 py-1.5 text-xs text-on-surface-muted focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors';
 
 const UNIT_OPTIONS = ['g', 'each', 'pinch', 'dash', 'sprig', 'handful', 'cup', 'tsp', 'tbsp', 'ml', 'kg'];
 
 const btnIcon =
   'shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-outline hover:bg-surface-container hover:text-primary transition-colors';
 
+const btnDelete =
+  'shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-outline/80 hover:bg-primary-container hover:text-primary transition-colors';
+
 const GRIP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
+
+const DELETE_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
+
+const GROUPED_VIEW_KEY = 'yumlog-shopping-grouped';
 
 let items: ShoppingItem[] = [];
 let listEl: HTMLElement;
 let emptyEl: HTMLElement;
+let viewControlsEl: HTMLElement | null;
+let groupByAisleToggle: HTMLButtonElement | null;
+let groupedView = true;
 let refreshing = false;
 let dragging = false;
+
+function loadGroupedPreference(): boolean {
+  try {
+    const stored = localStorage.getItem(GROUPED_VIEW_KEY);
+    if (stored === 'false') return false;
+    if (stored === 'true') return true;
+  } catch { /* private browsing */ }
+  return true;
+}
+
+function saveGroupedPreference(grouped: boolean): void {
+  try {
+    localStorage.setItem(GROUPED_VIEW_KEY, grouped ? 'true' : 'false');
+  } catch { /* ignore */ }
+}
+
+function syncViewToggle(): void {
+  if (!viewControlsEl || !groupByAisleToggle) return;
+
+  viewControlsEl.classList.toggle('hidden', items.length === 0);
+  groupByAisleToggle.setAttribute('aria-checked', groupedView ? 'true' : 'false');
+  groupByAisleToggle.classList.toggle('bg-primary', groupedView);
+  groupByAisleToggle.classList.toggle('bg-outline-soft/70', !groupedView);
+
+  const thumb = groupByAisleToggle.querySelector('.switch-thumb');
+  if (thumb) {
+    thumb.classList.toggle('translate-x-5', groupedView);
+    thumb.classList.toggle('translate-x-0', !groupedView);
+  }
+}
 
 export async function initShoppingListUI() {
   listEl = document.getElementById('shopping-list')!;
@@ -42,8 +93,19 @@ export async function initShoppingListUI() {
   const clearAllCancel = document.getElementById('clear-all-cancel')!;
   const clearAllConfirm = document.getElementById('clear-all-confirm')!;
   const errorEl = document.getElementById('shopping-error')!;
+  viewControlsEl = document.getElementById('list-view-controls');
+  groupByAisleToggle = document.getElementById('group-by-aisle') as HTMLButtonElement | null;
+  groupedView = loadGroupedPreference();
+  syncViewToggle();
 
-  const knownIngredients = await fetchKnownIngredients();
+  groupByAisleToggle?.addEventListener('click', () => {
+    groupedView = !groupedView;
+    saveGroupedPreference(groupedView);
+    syncViewToggle();
+    render();
+  });
+
+  const knownIngredients = await fetchShoppableIngredients();
   const addNameInput = document.getElementById('add-name') as HTMLInputElement;
   const addSuggestions = document.getElementById('add-name-suggestions') as HTMLUListElement;
 
@@ -54,7 +116,12 @@ export async function initShoppingListUI() {
   }
 
   await refresh();
-  setupDragReorder(listEl);
+
+  setupShoppingListDrag(
+    listEl,
+    () => { void persistOrder(); },
+    (isDragging) => { dragging = isDragging; },
+  );
 
   subscribeShoppingList(() => {
     if (!refreshing && !dragging) refresh();
@@ -69,8 +136,28 @@ export async function initShoppingListUI() {
     const unit = (document.getElementById('add-unit') as HTMLSelectElement).value;
 
     try {
+      const canonical = normalizeIngredient(name);
+      if (!canonical) throw new Error('Enter an ingredient name');
+
+      const registry = await fetchIngredientRegistry();
+      let category: string | null = null;
+
+      if (!registry.has(canonical)) {
+        const picked = await promptIngredientCategories([canonical]);
+        if (!picked) return;
+        await ensureIngredientForShopping(name, picked[canonical]);
+        category = picked[canonical];
+      } else {
+        category = await lookupIngredientCategory(name);
+        if (!category) {
+          errorEl.textContent = 'That ingredient isn’t shopped for — it won’t be added to the list.';
+          errorEl.classList.remove('hidden');
+          return;
+        }
+      }
+
       const quantity = parseQty(qtyRaw);
-      await addManualItem(name, quantity, unit);
+      await addManualItem(name, quantity, unit, category);
       addForm.reset();
       (document.getElementById('add-unit') as HTMLSelectElement).value = 'each';
       await refresh();
@@ -132,22 +219,113 @@ async function refresh() {
   }
 }
 
+async function persistOrder() {
+  const ids = collectOrderedIds(listEl, INGREDIENT_SECTION_ORDER);
+  if (ids.length === 0) return;
+
+  try {
+    await setItemOrder(ids);
+    items = ids
+      .map(id => items.find(i => i.id === id))
+      .filter((i): i is ShoppingItem => i != null);
+  } catch {
+    await refresh();
+  }
+}
+
+function groupBySection(allItems: ShoppingItem[]): Map<string, ShoppingItem[]> {
+  const groups = new Map<string, ShoppingItem[]>();
+
+  for (const item of allItems) {
+    const key = item.category ?? '';
+    const list = groups.get(key) ?? [];
+    list.push(item);
+    groups.set(key, list);
+  }
+
+  for (const list of groups.values()) {
+    list.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  }
+
+  return groups;
+}
+
 function render() {
   listEl.innerHTML = '';
   emptyEl.classList.toggle('hidden', items.length > 0);
   const hasItems = items.length > 0;
   document.getElementById('clear-checked')?.classList.toggle('hidden', !items.some(i => i.checked));
   document.getElementById('clear-all')?.classList.toggle('hidden', !hasItems);
+  syncViewToggle();
 
-  for (const item of items) {
-    listEl.appendChild(buildRow(item));
+  if (!hasItems) return;
+
+  if (groupedView) {
+    renderGrouped();
+  } else {
+    listEl.appendChild(buildFlatList(items));
   }
+}
+
+function renderGrouped() {
+  const groups = groupBySection(items);
+
+  for (const sectionKey of INGREDIENT_SECTION_ORDER) {
+    const sectionItems = groups.get(sectionKey);
+    if (!sectionItems?.length) continue;
+    listEl.appendChild(buildSection(sectionKey as IngredientSection, sectionItems));
+  }
+
+  const uncategorised = groups.get('');
+  if (uncategorised?.length) {
+    listEl.appendChild(buildSection('' as IngredientSection, uncategorised, 'Other'));
+  }
+}
+
+function buildFlatList(allItems: ShoppingItem[]): HTMLElement {
+  const ul = document.createElement('ul');
+  ul.className =
+    'shopping-section flex flex-col bg-surface-low/60 rounded-2xl px-2 py-1 divide-y divide-outline-soft/50 list-none m-0';
+  ul.dataset.flat = 'true';
+
+  const sorted = [...allItems].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  for (const item of sorted) {
+    ul.appendChild(buildRow(item));
+  }
+
+  return ul;
+}
+
+function buildSection(
+  sectionKey: IngredientSection | '',
+  sectionItems: ShoppingItem[],
+  labelOverride?: string,
+): HTMLElement {
+  const group = document.createElement('section');
+  group.className = 'shopping-group mb-5 last:mb-0';
+
+  const label = labelOverride ?? sectionDisplayLabel(sectionKey as IngredientSection);
+  group.innerHTML = `
+    <h2 class="font-serif text-base font-bold text-on-surface mb-2 px-1">${escapeHtml(label)}</h2>
+  `;
+
+  const ul = document.createElement('ul');
+  ul.className =
+    'shopping-section flex flex-col bg-surface-low/60 rounded-2xl px-2 py-1 divide-y divide-outline-soft/50 list-none m-0';
+  ul.dataset.section = sectionKey;
+
+  for (const item of sectionItems) {
+    ul.appendChild(buildRow(item));
+  }
+
+  group.appendChild(ul);
+  return group;
 }
 
 function buildRow(item: ShoppingItem): HTMLElement {
   const row = document.createElement('li');
   row.className = [
-    'shopping-row flex items-center gap-1.5 py-2.5 border-b border-outline-soft/60 last:border-b-0',
+    'shopping-row flex items-center gap-2 py-2.5 transition-[opacity,background-color] duration-150',
     item.checked ? 'opacity-50' : '',
   ].join(' ');
   row.dataset.id = String(item.id);
@@ -157,15 +335,17 @@ function buildRow(item: ShoppingItem): HTMLElement {
   ).join('');
 
   row.innerHTML = `
-    <button type="button" class="drag-handle shrink-0 touch-none p-1 -ml-0.5 text-outline/80 hover:text-on-surface-muted cursor-grab active:cursor-grabbing active:text-primary" aria-label="Drag to reorder" data-drag-handle>
-      ${GRIP_SVG}
+    <button type="button" class="delete-item ${btnDelete}" aria-label="Remove ${escapeAttr(item.ingredient)}">
+      ${DELETE_SVG}
     </button>
-    <input type="checkbox" class="item-checked shrink-0 w-4 h-4 rounded accent-primary" ${item.checked ? 'checked' : ''} aria-label="Mark ${escapeHtml(item.ingredient)} as done" />
-    <span class="item-name flex-1 min-w-0 text-sm text-on-surface truncate ${item.checked ? 'line-through' : ''}">${escapeHtml(item.ingredient)}</span>
-    <input type="text" inputmode="decimal" class="item-qty w-[4.25rem] shrink-0 ${inputSubtle} text-right tabular-nums" value="${item.quantity != null ? item.quantity : ''}" placeholder="qty" aria-label="Quantity" />
-    <select class="item-unit w-[4.25rem] shrink-0 ${selectSubtle}" aria-label="Unit">${unitOptions}</select>
-    <button type="button" class="delete-item ${btnIcon}" aria-label="Delete">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    <div class="row-qty-zone flex items-center gap-1 shrink-0 py-1.5 px-2 -my-1 rounded-xl touch-manipulation">
+      <input type="text" inputmode="decimal" class="item-qty w-[3.75rem] ${inputSubtle} text-right tabular-nums" value="${item.quantity != null ? item.quantity : ''}" placeholder="qty" aria-label="Quantity for ${escapeAttr(item.ingredient)}" />
+      <select class="item-unit w-[4rem] ${selectSubtle}" aria-label="Unit for ${escapeAttr(item.ingredient)}">${unitOptions}</select>
+    </div>
+    <span class="item-name flex-1 min-w-0 text-sm text-on-surface truncate px-1 ${item.checked ? 'line-through' : ''}">${escapeHtml(item.ingredient)}</span>
+    <input type="checkbox" class="item-checked shrink-0 w-5 h-5 rounded accent-primary touch-manipulation" ${item.checked ? 'checked' : ''} aria-label="Mark ${escapeAttr(item.ingredient)} as done" />
+    <button type="button" class="drag-handle shrink-0 touch-none p-1.5 -mr-0.5 text-outline/80 hover:text-on-surface-muted cursor-grab active:cursor-grabbing active:text-primary rounded-full hover:bg-surface-container transition-colors" aria-label="Drag to reorder ${escapeAttr(item.ingredient)}" data-drag-handle>
+      ${GRIP_SVG}
     </button>
   `;
 
@@ -214,83 +394,10 @@ function buildRow(item: ShoppingItem): HTMLElement {
   return row;
 }
 
-/** Pointer-based drag reorder — works on touch and mouse. */
-function setupDragReorder(container: HTMLElement) {
-  let activeRow: HTMLElement | null = null;
-  let pointerId: number | null = null;
-
-  function endDrag() {
-    if (!activeRow) return;
-    activeRow.classList.remove('shadow-sm', 'bg-surface-low', 'relative', 'z-10', 'rounded-xl');
-    activeRow = null;
-    pointerId = null;
-    dragging = false;
-  }
-
-  async function persistOrder() {
-    const ids = [...container.querySelectorAll<HTMLElement>('.shopping-row')]
-      .map(row => Number(row.dataset.id))
-      .filter(id => !Number.isNaN(id));
-
-    if (ids.length === 0) return;
-
-    try {
-      await setItemOrder(ids);
-      items = ids
-        .map(id => items.find(i => i.id === id))
-        .filter((i): i is ShoppingItem => i != null);
-    } catch {
-      await refresh();
-    }
-  }
-
-  container.addEventListener('pointerdown', (e) => {
-    const handle = (e.target as HTMLElement).closest('[data-drag-handle]');
-    if (!handle) return;
-
-    const row = handle.closest('.shopping-row') as HTMLElement | null;
-    if (!row) return;
-
-    e.preventDefault();
-    activeRow = row;
-    pointerId = e.pointerId;
-    dragging = true;
-    (handle as HTMLElement).setPointerCapture(pointerId);
-    row.classList.add('shadow-sm', 'bg-surface-low', 'relative', 'z-10', 'rounded-xl');
-  });
-
-  container.addEventListener('pointermove', (e) => {
-    if (!activeRow || e.pointerId !== pointerId) return;
-
-    const siblings = [...container.querySelectorAll<HTMLElement>('.shopping-row')].filter(r => r !== activeRow);
-    const y = e.clientY;
-    let placed = false;
-
-    for (const sibling of siblings) {
-      const rect = sibling.getBoundingClientRect();
-      if (y < rect.top + rect.height / 2) {
-        container.insertBefore(activeRow, sibling);
-        placed = true;
-        break;
-      }
-    }
-
-    if (!placed) {
-      container.appendChild(activeRow);
-    }
-  });
-
-  container.addEventListener('pointerup', async (e) => {
-    if (!activeRow || e.pointerId !== pointerId) return;
-    endDrag();
-    await persistOrder();
-  });
-
-  container.addEventListener('pointercancel', () => {
-    endDrag();
-  });
-}
-
 function escapeHtml(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function escapeAttr(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
 }

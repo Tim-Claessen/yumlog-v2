@@ -63,11 +63,17 @@ create table recipes (
   created_at     timestamptz default now()
 );
 
--- Ingredients for each recipe
+-- Canonical ingredient registry (one row per normalised name)
+create table ingredients (
+  name      text primary key,     -- normalised name, e.g. 'brown onion'
+  category  text                  -- shopping-list aisle; null = valid in recipes but not shopped
+);
+
+-- Per-recipe ingredient lines (FK → ingredients.name)
 create table recipe_ingredients (
   id            bigint generated always as identity primary key,
   recipe_slug   text not null references recipes(slug) on delete cascade,
-  ingredient    text not null,       -- normalised name, e.g. 'mushroom'
+  ingredient    text not null references ingredients(name) on update cascade on delete restrict,
   display_name  text,               -- original wording, e.g. 'button mushrooms'
   quantity      numeric,
   unit          text                -- 'g','kg','ml','cup','each','pinch'...
@@ -76,14 +82,16 @@ create table recipe_ingredients (
 -- The single shared shopping list (both users share one list)
 create table shopping_list (
   id          bigint generated always as identity primary key,
-  ingredient  text not null,        -- e.g. 'mushroom'
+  ingredient  text not null references ingredients(name) on update cascade on delete restrict,
   quantity    numeric,
   unit        text,                 -- canonical unit after conversion, e.g. 'g' or 'each'
   checked     boolean not null default false,
-  position    integer,              -- for drag reorder
+  position    integer,              -- global order; grouped display derives from category + position
   added_at    timestamptz default now()
 );
 ```
+
+`ingredients.category` is constrained in Postgres to one of eleven fixed aisle values (see **Ingredient shopping sections** below), or `null`.
 
 > **Pending migration** — run this once in the Supabase SQL editor if `tips`/`substitutions` columns don't yet exist:
 > ```sql
@@ -95,11 +103,14 @@ create table shopping_list (
 ### Row-level security
 
 - `recipes` and `recipe_ingredients` — public **SELECT**; authenticated-only **INSERT/UPDATE/DELETE**.
+- `ingredients` — public **SELECT** (needed at build time for joins and client autocomplete); authenticated-only writes.
 - `shopping_list` — authenticated-only for everything (no public access).
 
 ### Key design decisions
 
 - Primary keys are **slugs**, not UUIDs. Slugs are generated from the title on **create** (`titleToSlug()` in `src/lib/slug.ts` — hyphen-separated, e.g. `mixed-berry-muffins`) and **never change on edit**, even if the title is updated.
+- **Canonical ingredients** live in `ingredients` (one row per normalised name). `recipe_ingredients.ingredient` and `shopping_list.ingredient` are FKs to `ingredients.name` (`on update cascade`, `on delete restrict` — cannot delete a canonical name still referenced by a recipe).
+- On recipe save or manual shopping-list add, **upsert** new names into `ingredients` before inserting child rows. Brand-new names require a shopping **category** (modal prompt); existing names keep their stored category silently.
 - Public sign-ups are **disabled** in Supabase Auth. Only manually-added accounts (Tim + Zoe) can log in.
 
 ---
@@ -134,16 +145,27 @@ Substitution items often start with a bold ingredient name: `**Hass avocados:** 
 
 ## Ingredient normalisation and display
 
-### Canonical storage (`ingredient` column)
+### Canonical storage (`ingredients.name`)
 
 Keep all normalisation logic in `src/lib/ingredient.ts` (`normalizeIngredient()`).
 
 On save (create/edit form and manual shopping-list add):
 
-1. **Autocomplete safeguard** — as the user types, suggest existing `ingredient` values from `recipe_ingredients` so they reuse a canonical entry (e.g. pick `onion` instead of creating a variant). Shared UI in `src/lib/ingredient-autocomplete.ts`.
+1. **Autocomplete safeguard** — as the user types, suggest existing canonical names from the `ingredients` table (recipe form: all names; shopping manual-add: names with a non-null category only). Shared UI in `src/lib/ingredient-autocomplete.ts`.
 2. **Normalise on save** — for genuinely new input: lowercase, trimmed, `pluralize.singular()` on the **last word** (handles potato/potatoes, leaf/leaves, berry/berries). Small exceptions list for words that look plural but aren't (e.g. `bitters`, `lentils`).
+3. **New canonical names** — if the normalised name is not yet in `ingredients`, prompt the user to pick a shopping **category** before save (`ingredient-category-prompt.ts`). Upsert into `ingredients` with that category, then write the child row.
 
-Store the result in `ingredient`. Keep the user's wording in `display_name`.
+Store the normalised value in `ingredients.name` / FK columns. Keep the user's wording in `recipe_ingredients.display_name`.
+
+### Ingredient shopping sections
+
+Fixed aisle categories on `ingredients.category` (lowercase strings, CHECK-constrained in Postgres). Defined in `src/lib/ingredient-sections.ts` as `INGREDIENT_SECTION_ORDER`:
+
+1. `fresh produce` 2. `breakfast` 3. `tinned` 4. `spices` 5. `international food` 6. `other pantry` 7. `baking` 8. `snacks` 9. `drinks` 10. `fridge` 11. `freezer`
+
+**Null category** — ingredient exists for recipes but is excluded from shopping-list roll-up (e.g. `water`, `liquid from chickpea can`). Do not delete these rows; filter at the app layer when adding to the shopping list.
+
+Display labels via `sectionDisplayLabel()` (title-case words). Do not confuse with **recipe** `category` (slug-style `sweet_treat`, etc.) — different concept.
 
 ### Display pluralisation (recipe detail only)
 
@@ -181,17 +203,21 @@ Store the result in `ingredient`. Keep the user's wording in `display_name`.
 | each / whole / clove / slice               | each           | keep as 'each'    |
 | pinch / dash / to taste / sprig / handful  | (pass-through) | own line, no conv |
 
-When adding a recipe's ingredients to the shopping list: if the same `ingredient` in the same canonical `unit` already exists, **add the quantities** rather than creating a duplicate row.
+When adding a recipe's ingredients to the shopping list: if the same `ingredient` in the same canonical `unit` already exists, **add the quantities** rather than creating a duplicate row. **Skip** ingredients whose `ingredients.category` is `null`.
 
 Keep all conversion logic in `src/lib/units.ts` (`toShoppingUnit()`, `addQuantities()`, `shoppingMergeKey()`).
 
 ### Shopping list UI (`/shopping`)
 
+Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-ui.ts` (no React/Svelte). DOM built imperatively.
+
 - Auth-gated. Single shared list synced via Supabase (`shopping-list.ts` + realtime `postgres_changes` subscription).
-- **Add from recipe** — "Add to shopping list" button on recipe pages (auth-only); converts units then merges rows.
-- **Manual add** — ingredient field with autocomplete; qty uses `type="text"` + `inputmode="decimal"` (no native number spinners on mobile).
-- **Reorder** — pointer-based drag on the grip handle (touch + mouse); persists `position` column.
-- **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear checked.
+- **Add from recipe** — auth-only button on recipe pages; converts units, merges rows, skips null-category ingredients.
+- **Manual add** — ingredient field with autocomplete (shoppable names only); qty uses `type="text"` + `inputmode="decimal"`. New canonical names trigger the category picker modal.
+- **By aisle toggle** — M3 switch (`By aisle` on/off). On: group by `ingredients.category` with section headers (walk-the-shop order from `INGREDIENT_SECTION_ORDER`); empty sections hidden. Off: flat list sorted by global `position`. Preference stored in `localStorage` (`yumlog-shopping-grouped`).
+- **Row layout** (left → right): delete → qty + unit (padded tap zone) → name → checkbox → drag grip.
+- **Reorder** — pointer-based drag on grip only (`shopping-list-drag.ts`): fixed-position lift + shadow, dashed placeholder, FLIP animation on siblings, gentle settle on drop. **Grouped mode:** drag within one section only. **Flat mode:** drag across the single list. Persists global `position` via `setItemOrder()`.
+- **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear checked, clear all (with confirmation dialog).
 
 > Enable **Realtime** for `shopping_list` in Supabase → Database → Replication if cross-device live sync is needed.
 
@@ -278,11 +304,12 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 #### Create / edit (`create.astro`)
 
 - Single form for both modes. **Create:** `/create`. **Edit:** `/create?edit={slug}` — prepopulates fields; slug stays fixed on save.
-- Auth-gated. Dynamic ingredient rows, method steps, tips, substitutions. Ingredient autocomplete on each row.
+- Auth-gated. Dynamic ingredient rows, method steps, tips, substitutions. Ingredient autocomplete on each row (all canonical names).
+- **New ingredient prompt** — on save, any canonical name not yet in `ingredients` opens the category picker before write.
 
 #### Shopping list (`shopping.astro`)
 
-- Auth-gated. Manual-add panel (`bg-surface-low/80`). Single-row list items with drag grip, checkbox, name, qty, unit, delete.
+- Auth-gated. Manual-add panel (`bg-surface-low/80`). Grouped or flat list (see **Shopping list UI** above). M3 section headers when grouped; terracotta accent on checkbox switch and primary actions.
 
 ### Navigation
 
@@ -366,7 +393,7 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
   .env                   ← Supabase URL + anon key (gitignored)
 /legacy/                 ← old Jekyll site — source of truth for recipe migration
 /scripts/
-  migrate-legacy.mjs     ← one-off migration: Jekyll → Supabase (service-role key only)
+  migrate-legacy.mjs     ← one-off migration: Jekyll → Supabase (upserts ingredients, then recipe_ingredients)
 /public/                 ← static assets (favicon, etc.)
 /src/
   /pages/
@@ -383,13 +410,16 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
     auth.ts              ← signIn, signOut, getSession, requireAuth, initAuthUI
     format.ts            ← toDisplayLabel, splitValues, parseStepLabel, stripBullet
     slug.ts              ← titleToSlug (hyphen-separated slugs)
-    ingredient.ts        ← normalizeIngredient, displayIngredientName
+    ingredient.ts              ← normalizeIngredient, displayIngredientName
+    ingredient-sections.ts     ← INGREDIENT_SECTION_ORDER, sectionDisplayLabel, sectionSortIndex
+    ingredient-category-prompt.ts ← M3 modal: pick aisle for new canonical ingredients
     ingredient-autocomplete.ts ← shared autocomplete wiring for ingredient inputs
-    units.ts             ← shopping-list unit conversion
-    recipe-editor.ts     ← load/save recipe, fetchKnownIngredients, matchIngredients
-    recipe-form-ui.ts    ← create/edit form DOM wiring
-    shopping-list.ts     ← shopping list CRUD, merge on add, realtime subscription
-    shopping-list-ui.ts  ← shopping list DOM wiring, drag reorder
+    units.ts                   ← shopping-list unit conversion
+    recipe-editor.ts           ← load/save recipe, ingredients registry, category upsert, autocomplete
+    recipe-form-ui.ts          ← create/edit form DOM wiring, new-ingredient prompt on submit
+    shopping-list.ts           ← shopping list CRUD, merge on add, category join, realtime subscription
+    shopping-list-ui.ts        ← shopping list DOM, grouping toggle, row layout
+    shopping-list-drag.ts      ← section-scoped drag reorder (FLIP + lift/settle)
   /styles/
     global.css           ← Tailwind entry point + M3 colour tokens (@theme block)
 ```

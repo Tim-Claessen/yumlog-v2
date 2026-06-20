@@ -570,6 +570,26 @@ async function main() {
     }
 
     if (ingredients.length > 0) {
+      const canonicalNames = [...new Set(ingredients.map((row) => row.ingredient))];
+
+      const { error: canonErr } = await supabase
+        .from("ingredients")
+        .upsert(
+          canonicalNames.map((name) => ({ name })),
+          { onConflict: "name" },
+        );
+
+      if (canonErr) {
+        errors.push({
+          file: filename,
+          message: `ingredients registry: ${canonErr.message}`,
+        });
+        console.log(
+          `  [${i + 1}/${files.length}] ${slug} … ✗ ingredients registry failed: ${canonErr.message}`,
+        );
+        continue;
+      }
+
       // Delete existing first (idempotent re-run)
       await supabase
         .from("recipe_ingredients")

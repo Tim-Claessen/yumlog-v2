@@ -1,12 +1,17 @@
 import { wireIngredientAutocomplete } from './ingredient-autocomplete';
+import { promptIngredientCategories } from './ingredient-category-prompt';
+import type { IngredientSection } from './ingredient-sections';
 import {
+  collectCanonicalNames,
   emptyFormData,
   emptyIngredientRow,
   fetchFilterOptions,
+  fetchIngredientNames,
   fetchKnownIngredients,
   loadRecipe,
   recipeToFormData,
   saveRecipe,
+  findUnknownIngredients,
   UNIT_OPTIONS,
   type RecipeFormData,
 } from './recipe-editor';
@@ -122,7 +127,22 @@ export async function initRecipeForm(editSlug: string | null) {
         methodList, tipsList, subsList, ingredientsList,
       });
 
-      const { slug, isNew } = await saveRecipe(data, editSlug);
+      const registry = await fetchIngredientNames();
+      const unknown = findUnknownIngredients(
+        collectCanonicalNames(data.ingredients),
+        registry,
+      );
+
+      let newCategories: Record<string, IngredientSection> = {};
+      if (unknown.length > 0) {
+        if (submitBtn) submitBtn.disabled = false;
+        const picked = await promptIngredientCategories(unknown);
+        if (!picked) return;
+        newCategories = picked;
+        if (submitBtn) submitBtn.disabled = true;
+      }
+
+      const { slug, isNew } = await saveRecipe(data, editSlug, newCategories);
 
       if (isNew) {
         formSuccess.textContent = 'Recipe created! It will appear on the site after the next deploy.';

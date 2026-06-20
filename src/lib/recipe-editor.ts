@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { titleToSlug } from './slug';
 import { normalizeIngredient } from './ingredient';
+import type { IngredientSection } from './ingredient-sections';
 
 export const UNIT_OPTIONS = [
   'g', 'kg', 'mg', 'ml', 'l', 'cup', 'tsp', 'tbsp', 'oz', 'lb',
@@ -50,12 +51,76 @@ interface IngredientRecord {
 
 export async function fetchKnownIngredients(): Promise<string[]> {
   const { data, error } = await supabase
-    .from('recipe_ingredients')
-    .select('ingredient');
+    .from('ingredients')
+    .select('name')
+    .order('name');
 
   if (error) throw error;
+  return (data ?? []).map(r => r.name);
+}
 
-  return [...new Set((data ?? []).map(r => r.ingredient))].sort();
+/** Canonical names with a shopping section (excludes water, aquafaba, etc.). */
+export async function fetchShoppableIngredients(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('ingredients')
+    .select('name')
+    .not('category', 'is', null)
+    .order('name');
+
+  if (error) throw error;
+  return (data ?? []).map(r => r.name);
+}
+
+export async function fetchIngredientNames(): Promise<Set<string>> {
+  const { data, error } = await supabase.from('ingredients').select('name');
+  if (error) throw error;
+  return new Set((data ?? []).map(r => r.name));
+}
+
+export function resolveCanonicalIngredient(row: IngredientRow): string | null {
+  const name = row.name.trim();
+  if (!name) return null;
+  const canonical = row.pickedCanonical ?? normalizeIngredient(name);
+  return canonical || null;
+}
+
+/** Distinct canonical names from ingredient rows (form order preserved). */
+export function collectCanonicalNames(rows: IngredientRow[]): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+
+  for (const row of rows) {
+    const canonical = resolveCanonicalIngredient(row);
+    if (!canonical || seen.has(canonical)) continue;
+    seen.add(canonical);
+    names.push(canonical);
+  }
+
+  return names;
+}
+
+export function findUnknownIngredients(
+  canonicalNames: string[],
+  existing: Set<string>,
+): string[] {
+  return canonicalNames.filter(name => !existing.has(name));
+}
+
+export async function upsertIngredientCategories(
+  categories: Record<string, IngredientSection>,
+): Promise<void> {
+  const rows = Object.entries(categories).map(([name, category]) => ({
+    name,
+    category,
+  }));
+
+  if (rows.length === 0) return;
+
+  const { error } = await supabase
+    .from('ingredients')
+    .upsert(rows, { onConflict: 'name' });
+
+  if (error) throw error;
 }
 
 export async function fetchFilterOptions(): Promise<{ categories: string[]; proteins: string[] }> {
@@ -157,14 +222,10 @@ function linesFromList(items: string[]): string | null {
   return lines.length > 0 ? lines.join('\n') : null;
 }
 
-function canonicalIngredient(row: IngredientRow): string {
-  if (row.pickedCanonical) return row.pickedCanonical;
-  return normalizeIngredient(row.name);
-}
-
 export async function saveRecipe(
   form: RecipeFormData,
   editSlug: string | null,
+  newIngredientCategories: Record<string, IngredientSection> = {},
 ): Promise<{ slug: string; isNew: boolean }> {
   const title = form.title.trim();
   if (!title) throw new Error('Title is required');
@@ -176,7 +237,7 @@ export async function saveRecipe(
     .map(row => {
       const name = row.name.trim();
       if (!name) return null;
-      const canonical = canonicalIngredient(row);
+      const canonical = resolveCanonicalIngredient(row);
       if (!canonical) return null;
       return {
         quantity: row.quantity.trim() ? Number(row.quantity) : null,
@@ -186,6 +247,24 @@ export async function saveRecipe(
       };
     })
     .filter((r): r is NonNullable<typeof r> => r != null);
+
+  const canonicalNames = ingredientRows.map(r => r.ingredient);
+  const existing = await fetchIngredientNames();
+  const unknown = findUnknownIngredients(canonicalNames, existing);
+
+  for (const name of unknown) {
+    if (!newIngredientCategories[name]) {
+      throw new Error(`Pick a shopping section for “${name}”.`);
+    }
+  }
+
+  if (unknown.length > 0) {
+    await upsertIngredientCategories(
+      Object.fromEntries(
+        unknown.map(name => [name, newIngredientCategories[name]]),
+      ) as Record<string, IngredientSection>,
+    );
+  }
 
   const slug = editSlug ?? await uniqueSlug(titleToSlug(title));
 

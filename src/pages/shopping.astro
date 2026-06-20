@@ -136,7 +136,27 @@ import Layout from '../layouts/Layout.astro';
       Nothing on the list yet — add from a recipe or type an item above.
     </p>
 
-    <ul id="shopping-list" class="flex flex-col"></ul>
+    <div
+      id="list-view-controls"
+      class="hidden flex items-center justify-end gap-2.5 mb-3"
+    >
+      <span class="text-xs font-medium text-on-surface-muted">By aisle</span>
+      <button
+        type="button"
+        id="group-by-aisle"
+        role="switch"
+        aria-checked="true"
+        aria-label="Group shopping list by aisle"
+        class="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-primary p-0.5 transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+      >
+        <span
+          class="switch-thumb pointer-events-none block size-5 shrink-0 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out translate-x-5"
+          aria-hidden="true"
+        ></span>
+      </button>
+    </div>
+
+    <div id="shopping-list" class="flex flex-col"></div>
   </div>
 </Layout>
 
