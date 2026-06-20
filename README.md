@@ -2,78 +2,88 @@
 
 **Zoe & Tim's favourite recipes**
 
-**Yumlog** is a cookbook for the foods we love making: easy to search, browse by category or protein, or skim A–Z. Built with [Jekyll](https://jekyllrb.com/) and hosted on [GitHub Pages](https://pages.github.com/).
-
-## Table of contents
-
-- [Live site](#live-site)
-- [Contributing](#contributing)
-- [Local development](#local-development)
-- [Layout and theming](#layout-and-theming)
-- [Developer tools](#developer-tools)
-- [Line endings](#line-endings)
-- [To-do](#to-do)
-- [Credits](#credits)
-- [License](#license)
+A personal cookbook: search and browse recipes publicly, with a shared shopping list and recipe editor for the two of us. Built with [Astro](https://astro.build/) 6, [Tailwind CSS](https://tailwindcss.com/) 4, and [Supabase](https://supabase.com/), deployed to [Cloudflare Pages](https://pages.cloudflare.com/).
 
 ## Live site
 
-[https://tim-claessen.github.io/yumlog](https://tim-claessen.github.io/yumlog)
+Hosted on Cloudflare Pages (GitHub repo [`Tim-Claessen/yumlog-v2`](https://github.com/Tim-Claessen/yumlog-v2)).
 
-## Contributing
+## Features
 
-Share a recipe via the Google Form:
-
-[Submit a recipe](https://forms.gle/Fj8Szehe23sCvq6GA)
-
-Submissions are reviewed before they appear on the site. Please credit sources when a recipe is adapted or inspired elsewhere.
+- **Public recipes** — pre-rendered static pages; no login required to browse or search.
+- **Auth-gated editing** — create and edit recipes, manage a shared shopping list, and maintain the ingredient registry (Tim + Zoe only; sign-ups disabled).
+- **Shopping list** — aisle grouping, drag reorder, unit conversion, realtime sync between devices.
+- **Ingredient registry** — canonical names, shopping sections, rename/merge/delete admin at `/settings/ingredients`.
 
 ## Local development
 
-From the repo root:
+**Requirements:** Node.js 22.12+ (see `package.json` engines).
 
 ```bash
-bundle exec jekyll serve
+npm install
 ```
 
-Then open the URL Jekyll prints (often `http://127.0.0.1:4000/yumlog/` when using the configured `baseurl`).
+Create a `.env` file in the repo root:
 
-If you do not use Bundler, `jekyll serve` works once Jekyll is installed. The site uses default GitHub Pages–friendly Jekyll settings (no custom Ruby gems in-repo).
+```
+PUBLIC_SUPABASE_URL=https://nrmimftrjulvsgonrlzg.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=<your anon key>
+```
 
-## Layout and theming
+Then:
 
-| Piece | Role |
-|--------|------|
-| `_layouts/default.html` | Site shell: header (nav, search, theme toggle), footer, client-side search from `search.json`. |
-| `_layouts/home.html` | Home page: hero, search, recent recipes, category/protein chips, optional submit CTA. |
-| `_layouts/recipe.html` | Recipe pages: metadata row (category, protein, times, source), then Markdown body. |
-| `_includes/recipe-card.html` | Reusable recipe card (used on home and in search results markup). |
-| `_assets/css/tokens.css` | Design tokens (colours, type scale, motion, elevations). Light defaults on `:root`; `[data-theme="dark"]` overrides. |
-| `_assets/css/main.css` | Layout and components. |
-| `_assets/css/print.css` | Print styles for recipes (`media="print"`). |
+```bash
+npm run dev      # http://localhost:4321
+npm run build    # static output → dist/
+npm run preview  # serve the production build locally
+```
 
-Copy for the home hero comes from `_config.yml` (`title`, `description`, `home_lead`, `submit_recipe_url`). Prefer new colours as CSS variables in `tokens.css`, not hardcoded in components.
+Recipe pages are generated at build time from Supabase. After adding a recipe in the app, run a build (or wait for the Cloudflare deploy triggered by the Supabase webhook) before the new static page appears.
 
-## Developer tools
+## Deployment
 
-The `_tools/` directory has Python helpers for recipe import, index generation, and search. See [_tools/README.md](_tools/README.md).
+| Setting | Value |
+| -------- | ----- |
+| Build command | `npm run build` |
+| Output directory | `dist` |
+| Node version | `22` |
 
-GitHub Actions (`.github/workflows/process_recipes.yml`) runs these automatically on a schedule; the live site is built by GitHub Pages’ Jekyll when you push to `main`.
+Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` in Cloudflare Pages environment variables.
 
-Work-in-progress features (AI generator, image pipeline) live in `_wip/`. See [_wip/README.md](_wip/README.md).
+Recipe create/edit/delete triggers a Supabase webhook on the `recipes` table, which POSTs to a Cloudflare deploy hook so static pages rebuild automatically (~2–3 min). See [CLAUDE.md](CLAUDE.md) for webhook and ingredient-registry rebuild details.
+
+## Repo layout
+
+```
+src/pages/          Routes (homepage, recipes, shopping, create, settings)
+src/lib/            Supabase client, auth, shopping list, ingredient logic
+src/layouts/        Shared shell and navigation
+src/styles/         Tailwind + Material Design 3 colour tokens
+scripts/            One-off SQL and schema checks
+public/             Static assets (favicon, etc.)
+```
+
+Detailed architecture, schema, UI patterns, and conventions live in [CLAUDE.md](CLAUDE.md) — the primary reference for development on this project.
+
+## Database scripts
+
+Run once in the Supabase SQL editor when setting up or upgrading:
+
+- **`scripts/ingredient-registry-rpc.sql`** — `touch_recipes_for_ingredient()` and `merge_ingredients()` RPCs for ingredient rename/merge and rebuild triggers.
+
+Check schema expectations locally with:
+
+```bash
+node scripts/check-supabase-schema.mjs
+```
 
 ## Line endings
 
-The repo uses `.gitattributes` with `* text=auto eol=lf` so text files normalize to LF. After cloning on Windows, use `git add --renormalize .` if you see whole-file CRLF diffs.
-
-## To-do
-
-- Ship AI recipe generator (`_wip/ai_generator.md`) — needs Netlify backend wired up
-- Optional: brief per-recipe descriptions in front matter
+The repo uses `.gitattributes` with `* text=auto eol=lf`. After cloning on Windows, run `git add --renormalize .` if you see whole-file CRLF diffs.
 
 ## Credits
 
-Thanks to everyone whose cooking and writing inspired these recipes. Contributor acknowledgments: [Credits.md](Credits.md).
+Thanks to everyone whose cooking and writing inspired these recipes. See [Credits.md](Credits.md).
 
 ## License
 

@@ -103,8 +103,6 @@ create table shopping_list (
 > alter table recipes add column if not exists tips          text;
 > alter table recipes add column if not exists substitutions text;
 > ```
-> Then re-run `scripts/migrate-legacy.mjs` (with service-role key) to populate all three text fields.
->
 > `shopping_list.updated_at` + auto-touch on row update:
 > ```sql
 > alter table shopping_list
@@ -385,7 +383,7 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 - **URL:** `https://nrmimftrjulvsgonrlzg.supabase.co`
 - **Anon key format:** JWT (the long `eyJ…` key), not the newer `sb_publishable_` format — both work but JWT is used here for compatibility.
 - The anon key is safe to expose publicly and is stored in `.env` as `PUBLIC_SUPABASE_ANON_KEY`.
-- The **service-role key** is never committed. It is only used in one-off migration scripts, deleted immediately after.
+- The **service-role key** is never committed.
 
 ## Environment variables
 
@@ -445,10 +443,9 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
   package.json
   tsconfig.json
   .env                   ← Supabase URL + anon key (gitignored)
-/legacy/                 ← old Jekyll site — source of truth for recipe migration
 /scripts/
-  migrate-legacy.mjs           ← one-off migration: Jekyll → Supabase (upserts ingredients, then recipe_ingredients)
   ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
+  check-supabase-schema.mjs    ← verify expected columns and RPCs against live Supabase
 /public/                 ← static assets (favicon, etc.)
 /src/
   /pages/
