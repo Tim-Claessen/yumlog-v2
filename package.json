@@ -8,8 +8,10 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "preview": "npm run build && wrangler dev",
+    "astro": "astro",
+    "generate-types": "wrangler types",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@fontsource-variable/hanken-grotesk": "^5.2.8",
@@ -21,6 +23,10 @@
     "tailwindcss": "^4.3.1"
   },
   "devDependencies": {
-    "@types/pluralize": "^0.0.33"
+    "@types/pluralize": "^0.0.33",
+    "wrangler": "^4.103.0"
+  },
+  "overrides": {
+    "vite": "^7"
   }
 }
