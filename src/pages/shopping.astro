@@ -10,7 +10,7 @@ import Layout from '../layouts/Layout.astro';
   <div id="auth-content" class="hidden">
     <header class="flex items-baseline justify-between gap-4 mb-6">
       <div>
-        <h1 class="font-serif text-2xl font-bold text-on-surface">Shopping list</h1>
+        <h1 class="font-serif text-[32px] font-semibold text-on-surface leading-[1.1]">Shopping list</h1>
         <p class="text-sm text-on-surface-muted mt-1">Shared between Tim &amp; Zoe</p>
       </div>
       <div class="flex flex-col items-end gap-1 shrink-0">
@@ -19,7 +19,7 @@ import Layout from '../layouts/Layout.astro';
           id="clear-checked"
           class="hidden text-sm font-medium text-primary hover:underline"
         >
-          Clear checked
+          Clear done
         </button>
         <button
           type="button"
@@ -89,7 +89,7 @@ import Layout from '../layouts/Layout.astro';
           />
           <ul
             id="add-name-suggestions"
-            class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"
+            class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-surface border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"
           ></ul>
         </div>
       </label>
@@ -150,7 +150,7 @@ import Layout from '../layouts/Layout.astro';
         class="inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full bg-primary p-0.5 transition-colors duration-200 ease-out focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
       >
         <span
-          class="switch-thumb pointer-events-none block size-5 shrink-0 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out translate-x-5"
+          class="switch-thumb pointer-events-none block size-5 shrink-0 rounded-full bg-surface shadow-sm transition-transform duration-200 ease-out translate-x-5"
           aria-hidden="true"
         ></span>
       </button>

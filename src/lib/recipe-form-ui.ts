@@ -17,10 +17,10 @@ import {
 } from './recipe-editor';
 
 const inputClass =
-  'w-full bg-white border border-outline-soft rounded-2xl px-4 py-2.5 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors';
+  'w-full bg-surface border border-outline-soft rounded-2xl px-4 py-2.5 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors';
 
 const selectClass =
-  'w-full bg-white border border-outline-soft rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors';
+  'w-full bg-surface border border-outline-soft rounded-xl px-3 py-2.5 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors';
 
 const btnSecondary =
   'inline-flex items-center gap-1.5 text-sm font-medium text-secondary border border-secondary/30 rounded-full px-3 py-1.5 hover:bg-secondary-container transition-colors';
@@ -311,7 +311,7 @@ function addIngredientRow(
     <select class="ing-unit ${selectClass}">${unitOptions}</select>
     <div class="relative min-w-0">
       <input type="text" class="ing-name ${inputClass}" value="${escapeAttr(row.name)}" placeholder="Ingredient" autocomplete="off" />
-      <ul class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-white border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"></ul>
+      <ul class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-surface border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"></ul>
     </div>
     <button type="button" class="remove-row ${btnIcon} mt-0.5" aria-label="Remove ingredient">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

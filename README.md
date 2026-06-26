@@ -4,6 +4,8 @@
 
 A personal cookbook: search and browse recipes publicly, with a shared shopping list and recipe editor for the two of us. Built with [Astro](https://astro.build/) 6, [Tailwind CSS](https://tailwindcss.com/) 4, and [Supabase](https://supabase.com/), deployed to [Cloudflare Pages](https://pages.cloudflare.com/).
 
+The UI uses the **Hearth** design direction — editorial Newsreader serif, Hanken Grotesk UI type, and a clay / sage / paper palette. See [`docs/brand-hearth.md`](docs/brand-hearth.md) for the full brand guide.
+
 ## Live site
 
 Hosted on Cloudflare Pages (GitHub repo [`Tim-Claessen/yumlog-v2`](https://github.com/Tim-Claessen/yumlog-v2)).
@@ -57,13 +59,14 @@ Recipe create/edit/delete triggers a Supabase webhook on the `recipes` table, wh
 ```
 src/pages/          Routes (homepage, recipes, shopping, create, settings)
 src/lib/            Supabase client, auth, shopping list, ingredient logic
-src/layouts/        Shared shell and navigation
-src/styles/         Tailwind + Material Design 3 colour tokens
+src/layouts/        Shared shell, fonts, wordmark, navigation
+src/styles/         Tailwind + Hearth colour tokens (global.css @theme)
+docs/               Brand and design reference (brand-hearth.md)
 scripts/            One-off SQL and schema checks
 public/             Static assets (favicon, etc.)
 ```
 
-Detailed architecture, schema, UI patterns, and conventions live in [CLAUDE.md](CLAUDE.md) — the primary reference for development on this project.
+Detailed architecture, schema, UI patterns, and conventions live in [CLAUDE.md](CLAUDE.md) — the primary reference for development on this project. Visual design details are in [docs/brand-hearth.md](docs/brand-hearth.md).
 
 ## Database scripts
 

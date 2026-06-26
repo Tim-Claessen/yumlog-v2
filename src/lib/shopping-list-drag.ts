@@ -1,7 +1,7 @@
 /** Section-scoped drag reorder with lift, FLIP sibling animation, and gentle settle. */
 
 const LIFT_SHADOW =
-  '0 8px 24px rgba(62, 13, 0, 0.12), 0 2px 8px rgba(62, 13, 0, 0.08)';
+  '0 8px 24px rgba(60, 40, 20, 0.12), 0 2px 8px rgba(60, 40, 20, 0.08)';
 
 interface DragState {
   row: HTMLElement;
@@ -64,7 +64,7 @@ function finishDrag(activeState: DragState) {
     'top 220ms cubic-bezier(0.2, 0, 0, 1), transform 220ms cubic-bezier(0.2, 0, 0, 1), box-shadow 220ms ease';
   row.style.top = `${targetTop}px`;
   row.style.transform = 'scale(1)';
-  row.style.boxShadow = '0 2px 8px rgba(62, 13, 0, 0.06)';
+  row.style.boxShadow = '0 2px 8px rgba(60, 40, 20, 0.06)';
 
   const commit = () => {
     row.removeEventListener('transitionend', onTransitionEnd);
