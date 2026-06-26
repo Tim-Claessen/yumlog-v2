@@ -38,6 +38,8 @@ const btnIcon =
 const btnDelete =
   'shrink-0 w-9 h-9 flex items-center justify-center rounded-full text-outline/80 hover:bg-primary-container hover:text-primary transition-colors';
 
+const CHECK_SVG = `<svg class="size-3 text-on-secondary" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>`;
+
 const GRIP_SVG = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/></svg>`;
 
 const DELETE_SVG = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`;
@@ -285,7 +287,7 @@ function renderGrouped() {
 function buildFlatList(allItems: ShoppingItem[]): HTMLElement {
   const ul = document.createElement('ul');
   ul.className =
-    'shopping-section flex flex-col bg-surface-low/60 rounded-2xl px-2 py-1 divide-y divide-outline-soft/50 list-none m-0';
+    'shopping-section flex flex-col bg-surface border border-outline-soft rounded-2xl px-2 py-1 divide-y divide-outline-soft list-none m-0';
   ul.dataset.flat = 'true';
 
   const sorted = [...allItems].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
@@ -306,12 +308,12 @@ function buildSection(
 
   const label = labelOverride ?? sectionDisplayLabel(sectionKey as IngredientSection);
   group.innerHTML = `
-    <h2 class="font-serif text-base font-bold text-on-surface mb-2 px-1">${escapeHtml(label)}</h2>
+    <h2 class="text-[11px] font-bold uppercase tracking-[0.15em] text-secondary mb-2 px-1">${escapeHtml(label)}</h2>
   `;
 
   const ul = document.createElement('ul');
   ul.className =
-    'shopping-section flex flex-col bg-surface-low/60 rounded-2xl px-2 py-1 divide-y divide-outline-soft/50 list-none m-0';
+    'shopping-section flex flex-col bg-surface border border-outline-soft rounded-2xl px-2 py-1 divide-y divide-outline-soft list-none m-0';
   ul.dataset.section = sectionKey;
 
   for (const item of sectionItems) {
@@ -324,26 +326,31 @@ function buildSection(
 
 function buildRow(item: ShoppingItem): HTMLElement {
   const row = document.createElement('li');
-  row.className = [
-    'shopping-row flex items-center gap-2 py-2.5 transition-[opacity,background-color] duration-150',
-    item.checked ? 'opacity-50' : '',
-  ].join(' ');
+  row.className = 'shopping-row flex items-center gap-2 py-2.5 transition-[opacity,background-color] duration-150';
   row.dataset.id = String(item.id);
 
   const unitOptions = UNIT_OPTIONS.map(u =>
     `<option value="${u}"${(item.unit ?? 'each') === u ? ' selected' : ''}>${u}</option>`,
   ).join('');
 
+  const checkedNameClass = item.checked ? 'line-through text-on-surface-muted' : 'text-on-surface';
+  const checkedQtyClass = item.checked ? 'opacity-60' : '';
+
   row.innerHTML = `
     <button type="button" class="delete-item ${btnDelete}" aria-label="Remove ${escapeAttr(item.ingredient)}">
       ${DELETE_SVG}
     </button>
-    <div class="row-qty-zone flex items-center gap-1 shrink-0 py-1.5 px-2 -my-1 rounded-xl touch-manipulation">
+    <div class="row-qty-zone flex items-center gap-1 shrink-0 py-1.5 px-2 -my-1 rounded-xl touch-manipulation ${checkedQtyClass}">
       <input type="text" inputmode="decimal" class="item-qty w-[3.75rem] ${inputSubtle} text-right tabular-nums" value="${item.quantity != null ? item.quantity : ''}" placeholder="qty" aria-label="Quantity for ${escapeAttr(item.ingredient)}" />
-      <select class="item-unit w-[4rem] ${selectSubtle}" aria-label="Unit for ${escapeAttr(item.ingredient)}">${unitOptions}</select>
+      <select class="item-unit w-[4rem] ${selectSubtle} tabular-nums" aria-label="Unit for ${escapeAttr(item.ingredient)}">${unitOptions}</select>
     </div>
-    <span class="item-name flex-1 min-w-0 text-sm text-on-surface truncate px-1 ${item.checked ? 'line-through' : ''}">${escapeHtml(item.ingredient)}</span>
-    <input type="checkbox" class="item-checked shrink-0 w-5 h-5 rounded accent-primary touch-manipulation" ${item.checked ? 'checked' : ''} aria-label="Mark ${escapeAttr(item.ingredient)} as done" />
+    <span class="item-name flex-1 min-w-0 text-sm truncate px-1 ${checkedNameClass}">${escapeHtml(item.ingredient)}</span>
+    <label class="relative shrink-0 flex items-center justify-center size-5 cursor-pointer touch-manipulation">
+      <input type="checkbox" class="item-checked peer sr-only" ${item.checked ? 'checked' : ''} aria-label="Mark ${escapeAttr(item.ingredient)} as done" />
+      <span class="checkbox-face size-5 rounded border border-outline-soft flex items-center justify-center transition-colors peer-checked:bg-secondary peer-checked:border-secondary [&_.checkbox-tick]:opacity-0 peer-checked:[&_.checkbox-tick]:opacity-100">
+        <span class="checkbox-tick transition-opacity ${item.checked ? 'opacity-100' : 'opacity-0'}">${CHECK_SVG}</span>
+      </span>
+    </label>
     <button type="button" class="drag-handle shrink-0 touch-none p-1.5 -mr-0.5 text-outline/80 hover:text-on-surface-muted cursor-grab active:cursor-grabbing active:text-primary rounded-full hover:bg-surface-container transition-colors" aria-label="Drag to reorder ${escapeAttr(item.ingredient)}" data-drag-handle>
       ${GRIP_SVG}
     </button>
@@ -353,11 +360,14 @@ function buildRow(item: ShoppingItem): HTMLElement {
   const qtyInput = row.querySelector('.item-qty') as HTMLInputElement;
   const unitSelect = row.querySelector('.item-unit') as HTMLSelectElement;
   const nameEl = row.querySelector('.item-name') as HTMLElement;
+  const qtyZone = row.querySelector('.row-qty-zone') as HTMLElement;
 
   checkbox.addEventListener('change', async () => {
     const checked = checkbox.checked;
-    row.classList.toggle('opacity-50', checked);
     nameEl.classList.toggle('line-through', checked);
+    nameEl.classList.toggle('text-on-surface-muted', checked);
+    nameEl.classList.toggle('text-on-surface', !checked);
+    qtyZone.classList.toggle('opacity-60', checked);
     try {
       await updateItem(item.id, { checked });
       item.checked = checked;

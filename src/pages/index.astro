@@ -35,21 +35,19 @@ const proteinValues = [...new Set(
 <Layout title="Yumlog" activeNav="recipes">
 
   <!-- Hero + search + filter (sticky) -->
-  <section id="hero" class="bg-surface-low/80 rounded-2xl px-5 py-6 mb-6 sm:mb-6 sticky top-16 z-10 transition-[padding,box-shadow,margin] duration-300">
-    <div id="hero-intro" class="flex items-center justify-between gap-4 mb-5 overflow-hidden will-change-[opacity,transform,max-height]">
+  <section id="hero" class="bg-surface border border-outline-soft rounded-2xl shadow-card px-5 py-6 mb-6 sm:mb-6 sticky top-16 z-10 transition-[padding,box-shadow,margin] duration-300">
+    <div id="hero-intro" class="flex items-start justify-between gap-4 mb-5 overflow-hidden will-change-[opacity,transform,max-height]">
       <div>
-        <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Tim &amp; Zoe's kitchen</p>
-        <h1 class="font-serif text-2xl font-bold text-on-surface leading-snug">
-          Everything we cook,<br />all in one place.
+        <p class="text-[11px] font-bold text-primary uppercase tracking-[0.15em] mb-1.5">Tim &amp; Zoe's kitchen</p>
+        <h1 class="font-serif text-[34px] font-semibold text-on-surface leading-[1.1] tracking-[-0.01em]">
+          Everything we cook,<br /><em class="text-primary">all in one place.</em>
         </h1>
       </div>
-      <svg class="shrink-0 text-primary opacity-50" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M3 11l19-9-9 19-2-8-8-2z"/>
-      </svg>
+      <p class="shrink-0 font-serif italic text-sm text-on-surface-muted pt-1 tabular-nums">{list.length} recipes</p>
     </div>
     <div class="flex items-center gap-2">
       <div class="relative flex-1 min-w-0">
-        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline/70" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <svg class="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
         <input
@@ -57,13 +55,13 @@ const proteinValues = [...new Set(
           type="search"
           placeholder="Search recipes…"
           autocomplete="off"
-          class="w-full bg-surface-container/50 border border-transparent rounded-xl pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-outline/70 focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+          class="w-full bg-surface border border-outline-soft rounded-[13px] pl-10 pr-4 py-2.5 text-sm text-on-surface placeholder:text-outline/70 focus:border-outline focus:outline-none transition-colors"
         />
       </div>
       <button
         type="button"
         id="filter-toggle"
-        class="relative shrink-0 inline-flex items-center justify-center size-[42px] bg-surface-container/50 border border-transparent rounded-xl text-on-surface-muted hover:text-on-surface hover:bg-surface-container focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        class="relative shrink-0 inline-flex items-center justify-center size-11 bg-surface border border-outline-soft rounded-[13px] text-on-surface-muted hover:text-on-surface hover:border-outline focus:border-outline focus:outline-none transition-colors"
         aria-expanded="false"
         aria-controls="filter-panel"
         aria-label="Filters"
@@ -82,16 +80,28 @@ const proteinValues = [...new Set(
     <section id="featured-section" class="mb-5 sm:mb-6 transition-all duration-300">
       <h2 class="font-serif text-sm sm:text-lg font-bold text-on-surface mb-2 sm:mb-3">Featured</h2>
       <div class="grid grid-cols-3 gap-2 sm:gap-3">
-        {featured.map(r => (
+        {featured.map((r, i) => {
+          const isSecondary = i === 1;
+          const cardBg = isSecondary ? 'bg-secondary-container' : 'bg-primary-container';
+          const titleColor = isSecondary ? 'text-on-secondary-container' : 'text-on-primary-container';
+          const eyebrowColor = isSecondary ? 'text-secondary' : 'text-primary';
+          const category = splitValues(r.category).slice(0, 1)[0];
+          return (
           <a
             href={`/recipes/${r.slug}`}
-            class="group min-w-0 flex items-center bg-primary-container rounded-xl sm:rounded-2xl px-2.5 py-2.5 sm:px-4 sm:py-3.5 hover:brightness-[0.98] active:brightness-95 transition-all"
+            class={`group min-w-0 flex flex-col justify-end min-h-[5.5rem] sm:min-h-[6.5rem] ${cardBg} rounded-2xl p-4 sm:p-5 hover:brightness-[0.98] active:brightness-95 transition-all`}
           >
-            <h3 class="font-serif text-[11px] sm:text-sm font-bold text-on-primary-container leading-tight line-clamp-3 group-hover:text-primary transition-colors">
+            {category && (
+              <p class={`text-[11px] font-bold uppercase tracking-[0.15em] ${eyebrowColor} mb-1.5`}>
+                {toDisplayLabel(category)}
+              </p>
+            )}
+            <h3 class={`font-serif text-[11px] sm:text-sm font-semibold ${titleColor} leading-tight line-clamp-3`}>
               {r.title}
             </h3>
           </a>
-        ))}
+          );
+        })}
       </div>
     </section>
   )}
@@ -158,7 +168,7 @@ const proteinValues = [...new Set(
   <section>
     <div class="flex items-baseline justify-between mb-3">
       <h2 class="font-serif text-lg font-bold text-on-surface">
-        All recipes <span id="recipe-count" class="text-base font-sans font-normal text-on-surface-muted">({list.length})</span>
+        All recipes <span id="recipe-count" class="text-base font-sans font-normal text-on-surface-muted tabular-nums">({list.length})</span>
       </h2>
       <button id="clear-filters" class="hidden text-xs font-medium text-primary hover:underline">
         Clear filters
@@ -169,7 +179,7 @@ const proteinValues = [...new Set(
       <p class="text-on-surface-muted text-center py-20">No recipes yet — check back soon.</p>
     )}
 
-    <ul id="recipe-list" class="flex flex-col divide-y divide-outline-soft">
+    <ul id="recipe-list" class="flex flex-col divide-y divide-outline-soft bg-surface border border-outline-soft rounded-2xl overflow-hidden">
       {list.map(r => (
         <li
           data-title={r.title.toLowerCase()}
@@ -179,17 +189,17 @@ const proteinValues = [...new Set(
         >
           <a
             href={`/recipes/${r.slug}`}
-            class="flex items-center justify-between gap-3 py-3.5 hover:bg-surface-low active:bg-surface-container transition-colors -mx-1 px-1 rounded-lg"
+            class="flex items-center justify-between gap-3 py-3.5 px-4 hover:bg-surface-low active:bg-surface-container transition-colors"
           >
             <span class="font-medium text-on-surface">{r.title}</span>
             <span class="flex items-center gap-2 shrink-0">
               {splitValues(r.category).slice(0, 1).map(c => (
-                <span class="bg-primary-container text-on-primary-container text-xs rounded-full px-2 py-0.5 font-medium">
+                <span class="bg-primary-container text-on-primary-container text-[11px] rounded-full px-2 py-0.5 font-medium">
                   {toDisplayLabel(c)}
                 </span>
               ))}
               {r.cook_time_min && (
-                <span class="text-xs text-on-surface-muted whitespace-nowrap">{r.cook_time_min}&thinsp;min</span>
+                <span class="text-xs text-on-surface-muted whitespace-nowrap tabular-nums">{r.cook_time_min}&thinsp;min</span>
               )}
             </span>
           </a>

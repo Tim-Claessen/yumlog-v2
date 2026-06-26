@@ -12,6 +12,7 @@ A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of
 | Styling   | Tailwind CSS 4 (via `@tailwindcss/vite`, not `@astrojs/tailwind`)   |
 | Backend   | Supabase (Postgres + Auth)                                          |
 | DB client | `@supabase/supabase-js` 2                                           |
+| Fonts     | `@fontsource-variable/newsreader`, `@fontsource-variable/hanken-grotesk` |
 | Other     | `pluralize` — ingredient normalisation and display pluralisation    |
 
 ---
@@ -260,7 +261,7 @@ Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-
 - **By aisle toggle** — M3 switch (`By aisle` on/off). On: group by `ingredients.category` with section headers (walk-the-shop order from `INGREDIENT_SECTION_ORDER`); empty sections hidden. Off: flat list sorted by global `position`. Preference stored in `localStorage` (`yumlog-shopping-grouped`).
 - **Row layout** (left → right): delete → qty + unit (padded tap zone) → name → checkbox → drag grip.
 - **Reorder** — pointer-based drag on grip only (`shopping-list-drag.ts`): fixed-position lift + shadow, dashed placeholder, FLIP animation on siblings, gentle settle on drop. **Grouped mode:** drag within one section only. **Flat mode:** drag across the single list. Persists global `position` via `setItemOrder()`.
-- **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear checked, clear all (with confirmation dialog).
+- **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear done, clear all (with confirmation dialog).
 
 > Enable **Realtime** for `shopping_list` in Supabase → Database → Replication if cross-device live sync is needed.
 
@@ -268,26 +269,35 @@ Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-
 
 ## Design system
 
-The UI follows **Material Design 3** with a warm cookbook palette.
+The UI follows **Material Design 3** patterns with the **"Hearth"** editorial cookbook palette — clay terracotta, sage olive, ochre accent, and warm paper surfaces. No photography; type, colour, and whitespace carry the personality. Full brand reference: [`docs/brand-hearth.md`](docs/brand-hearth.md).
 
 ### Colour tokens — defined in `src/styles/global.css` via `@theme`
 
 | Token | Value | Used for |
 |---|---|---|
-| `primary` | `#B85C38` | Terracotta — buttons, links, ingredient quantities |
-| `primary-container` | `#FFDBCB` | Featured cards, category chips |
-| `on-primary-container` | `#3E0D00` | Text on primary-container |
-| `secondary` | `#5C7A62` | Sage — secondary actions (e.g. add to shopping list) |
-| `secondary-container` | `#CCE8D2` | (reserved) |
-| `surface` | `#FFF8F5` | Page background (warm off-white) |
-| `surface-low` | `#F5EDE8` | Hero / panel backgrounds (`bg-surface-low/80`) |
-| `surface-container` | `#EFE5E0` | Subtle input fills, hover states |
-| `on-surface-muted` | `#53403B` | Secondary text, metadata, cook time |
-| `outline-soft` | `#D8C2BC` | Dividers, borders |
+| `primary` | `#A8472B` | Clay — buttons, links, ingredient amounts, active nav |
+| `primary-container` | `#F4DAC8` | Featured cards (1 & 3), category chips, step badges |
+| `on-primary` | `#FFF1E6` | Warm cream text on terracotta (never pure white) |
+| `on-primary-container` | `#4A1606` | Text on primary-container |
+| `secondary` | `#566B4E` | Sage — add-to-shopping, checked shopping items |
+| `secondary-container` | `#DCE5CF` | Featured card 2, tip/substitution callouts |
+| `on-secondary-container` | `#27341F` | Text on secondary-container, tip labels |
+| `accent` | `#C58A2E` | Ochre — wordmark dot only; use sparingly |
+| `surface` | `#FBF4EA` | Page background and card fills (warm paper) |
+| `surface-low` | `#F6ECE0` | App bar, bottom nav, manual-add panel |
+| `surface-container` | `#F0E4D5` | Subtle input fills, hover states |
+| `on-surface-muted` | `#6E5C4F` | Secondary text, metadata, cook time |
+| `outline-soft` | `#EBDDCC` | Dividers, borders |
+
+Shadow tokens: `shadow-card` (hero, login card), `shadow-soft` (nested elements).
+
+### Card recipe
+
+Paper cards: `bg-surface border border-outline-soft rounded-2xl shadow-card`. Nested list cards use `bg-surface` + border, no shadow. Never use `bg-white` — use `bg-surface`.
 
 ### Subtle input pattern
 
-Used for search, filter-panel selects, shopping-list inline fields, and the manual-add form:
+Used for filter-panel selects, shopping-list inline fields, and forms that sit on tinted panels:
 
 ```
 bg-surface-container/50 border border-transparent rounded-xl
@@ -295,54 +305,46 @@ text-sm text-on-surface-muted
 focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60
 ```
 
-Avoid stark `bg-white` boxes for inline editable fields.
+Hero search and login/create fields use inset `bg-surface border border-outline-soft` instead.
 
 ### Shape scale
 
-- Panels and hero: `rounded-2xl` (16 px)
-- Inputs and filters: `rounded-xl`
+- Cards and hero: `rounded-2xl` (16 px), `shadow-card` where lifted
+- Hero search / filter: `rounded-[13px]`; filter button 44×44 px
+- Inputs: `rounded-xl`
 - Category chips: `rounded-full`
-- No boxed cards on recipe detail — content sits directly on the page surface
+- Recipe detail body: two-column grid on desktop; tips/subs in sage callouts below
 
 ### Typography
 
-- Headings / wordmark: `font-serif` (system serif stack)
-- Body / UI: `font-sans` (system sans-serif stack)
-- No external font CDN.
+- **Display / headings:** Newsreader (`font-serif`), weight 600, tight tracking on large titles
+- **Body / UI:** Hanken Grotesk (`font-sans`), self-hosted via Fontsource in `Layout.astro`
+- **Italic accents:** Newsreader italic on hero second line, tip labels, login subtitle — sparingly
+- **Eyebrows:** 11 px, bold, uppercase, wide tracking, `text-primary` or `text-secondary`
+- **Numbers:** `tabular-nums` on amounts, quantities, cook times, recipe counts
 
 ### UI patterns
 
-Keep styling **minimal and text-forward** — no coloured section cards on recipe pages, no gradient portrait cards on the homepage.
+Keep styling **minimal and text-forward** — no food photography or illustrated imagery.
 
 #### Homepage (`index.astro`)
 
 All homepage interactivity lives in a single inline `<script>` at the bottom of `index.astro` (search, filters, hero scroll, featured visibility). No separate lib file.
 
-- **Sticky hero** (`#hero`) — `bg-surface-low/80 rounded-2xl`, `sticky top-16 z-10` (sits below the `h-16` app bar in `Layout.astro`). Contains:
-  - **Welcome intro** (`#hero-intro`) — tagline + serif headline + decorative icon. On **mobile only**, scroll-dismisses quickly: opacity/height/transform interpolate over ~40px with a steep cubic curve (`scrollY / 40` then `t³`). The search row stays pinned; hero padding compacts and gains `shadow-sm` once collapsed (~28px scroll).
-  - **Search row** — flex row: search input (`#search`, subtle input pattern) + **filter icon button** (`#filter-toggle`, 42×42, same subtle fill). Filter badge (`#filter-badge`) shows active filter **count** only when category/protein/cook-time filters are set — toggle `hidden`/`flex` in JS (never combine `hidden` + `inline-flex` on the same element).
-  - **Active filter chips** (`#active-filter-chips`) — removable peach pills rendered below the search row when filters are active (all breakpoints).
-- **Featured** (`#featured-section`) — hand-picked recipes above the full list. Slugs in `FEATURED_SLUGS` at the top of `index.astro` (currently `sourdough-bread`, `mixed-berry-muffins`, `mexican-rice-arroz-rojo`). Order in the array controls display order.
-  - **Layout** — full-width `grid grid-cols-3` (equal thirds on mobile and desktop). Title only on featured cards — **no** category chip or cook time (those stay on the main recipe list).
-  - **Cards** — `bg-primary-container`, `rounded-xl` (mobile) / `rounded-2xl` (sm+), compact `text-[11px]` / `text-sm` serif titles with `line-clamp-3`.
-  - **Visibility** — hidden while the user is searching, has active filters, or (mobile only) has scrolled past the welcome collapse.
-- **Filters** — unified panel for all breakpoints (no inline desktop dropdowns). Filter icon opens `#filter-panel`:
-  - **Mobile** — bottom sheet over a dimmed backdrop.
-  - **Desktop (`sm+`)** — centred dialog (`sm:max-w-md`, `rounded-2xl`).
-  - Three `<select>`s (category, protein, cook time) using the subtle input pattern. Header has **Clear filters** (visible only when filters active) and **Done**. Client-side script syncs selects → `activeFilters` → recipe list visibility.
-  - **All recipes header** — separate **Clear filters** link clears search + filter selects when anything is active.
-- **All recipes list** — title left; category chip + cook time right (unchanged from recipe list pattern).
+- **Sticky hero** (`#hero`) — paper card (`bg-surface border border-outline-soft shadow-card`), `sticky top-16 z-10`. Contains:
+  - **Welcome intro** (`#hero-intro`) — eyebrow "Tim & Zoe's kitchen", 34 px serif headline with italic accent line in `text-primary`, recipe count (italic serif, top-right). On **mobile only**, scroll-dismisses quickly over ~40px (`scrollY / 40` then `t³`). Search row stays pinned; hero padding compacts and gains `shadow-sm` once collapsed (~28px scroll).
+  - **Search row** — inset `bg-surface` search (`rounded-[13px]`, magnifier in `text-outline`) + **filter button** (`#filter-toggle`, 44×44, matching border). Filter badge shows active filter **count** — toggle `hidden`/`flex` in JS.
+  - **Active filter chips** — removable peach pills below the search row when filters are active.
+- **Featured** (`#featured-section`) — slugs in `FEATURED_SLUGS` at the top of `index.astro`. `grid grid-cols-3`; cards alternate `bg-primary-container` / `bg-secondary-container` with uppercase category eyebrow + serif title, `min-height` for alignment. Hidden while searching, filtering, or (mobile) hero-collapsed.
+- **Filters** — bottom sheet (mobile) / centred dialog (desktop). Three `<select>`s with subtle input pattern.
+- **All recipes list** — bordered paper card; rows with title, 11 px category chip, `tabular-nums` cook time.
 
 #### Recipe detail (`recipes/[slug].astro`)
 
-- **Header** — plain title on page surface (no coloured header card). Metadata row below title:
-  - **Category** — peach pill chip (same as homepage list).
-  - **Protein** — plain `text-xs text-on-surface-muted` (no chip).
-  - **Cook time** — `text-xs text-on-surface-muted`.
-- **Auth-only toolbar** — "Edit recipe" (`/create?edit={slug}`) and "Add to shopping list" buttons; hidden for guests via `data-auth-only` + `initAuthUI()`.
-- **Ingredients** — flat list on page background. Quantities right-aligned in `text-primary/70`; names pluralised on display when qty > 1 and unit is `each`.
-- **Method** — plain numbered list (`1.` in muted text). Step labels via `parseStepLabel()`.
-- **Tips / substitutions** — simple `list-disc` bullet lists under section headings.
+- **Header** — 40 px serif title; metadata row with category chip, protein, `tabular-nums` cook time.
+- **Auth-only toolbar** — outline pills: Edit (`border-primary-container`), Add to shopping (`border-secondary-container`); hidden for guests via `data-auth-only`.
+- **Body** — desktop `grid grid-cols-[300px_1fr] gap-10`: ingredients left (amounts `text-primary font-semibold tabular-nums`, 58 px width), method right (circular step badges in `bg-primary-container`).
+- **Tips / substitutions** — sage `bg-secondary-container` callouts with italic serif labels.
 
 #### Create / edit (`create.astro`)
 
@@ -352,7 +354,11 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### Shopping list (`shopping.astro`)
 
-- Auth-gated. Manual-add panel (`bg-surface-low/80`). Grouped or flat list (see **Shopping list UI** above). M3 section headers when grouped; terracotta accent on checkbox switch and primary actions.
+- Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only.
+
+#### Login (`login.astro`)
+
+- Centred `shadow-card` (max ~400 px): 48 px clay medallion, "Welcome back", italic subtitle, inset `bg-surface` fields, inset-shadow primary button, muted footnote about disabled sign-ups.
 
 #### Settings (`settings.astro`, `settings/ingredients.astro`)
 
@@ -363,8 +369,10 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 
 ### Navigation
 
+- **Wordmark** — clay medallion + serif "Yumlog." with ochre full stop (`Layout.astro`).
 - **Guests (desktop + mobile):** Recipes + Log in.
 - **Logged in:** Recipes, Shopping, Create, **Settings** (last auth item, before Sign out on desktop) + Sign out.
+- **Desktop nav pills:** `text-[13px] font-semibold`; active `bg-primary-container text-on-primary-container`.
 - **Mobile:** fixed bottom nav — same items; Settings uses gear icon.
 - Pass `activeNav` prop to `Layout.astro` to highlight the current tab (`recipes` | `shopping` | `create` | `settings`).
 
@@ -443,6 +451,8 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
   package.json
   tsconfig.json
   .env                   ← Supabase URL + anon key (gitignored)
+/docs/
+  brand-hearth.md        ← Hearth brand guide (colours, type, component patterns)
 /scripts/
   ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
   check-supabase-schema.mjs    ← verify expected columns and RPCs against live Supabase
@@ -459,7 +469,7 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
     /recipes/
       [slug].astro       ← static recipe detail (getStaticPaths at build time)
   /layouts/
-    Layout.astro         ← shared HTML shell; auth-aware nav; bottom nav on mobile
+    Layout.astro         ← shared HTML shell; fonts, wordmark, auth-aware nav; bottom nav on mobile
   /lib/
     supabase.ts          ← Supabase client singleton (always import from here)
     auth.ts              ← signIn, signOut, getSession, requireAuth, initAuthUI
@@ -479,12 +489,14 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
     shopping-list-ui.ts        ← shopping list DOM, grouping toggle, row layout
     shopping-list-drag.ts      ← section-scoped drag reorder (FLIP + lift/settle)
   /styles/
-    global.css           ← Tailwind entry point + M3 colour tokens (@theme block)
+    global.css           ← Tailwind entry point + Hearth colour tokens (@theme block)
 ```
 
 ### Key wiring notes
 
 - **Tailwind:** imported via `src/styles/global.css`. `Layout.astro` imports it — all pages that use the layout get Tailwind automatically.
+- **Fonts:** Newsreader + Hanken Grotesk loaded in `Layout.astro` via Fontsource; stacks wired in `@theme`.
+- **Brand guide:** visual design reference at `docs/brand-hearth.md`.
 - **Supabase client:** always import from `src/lib/supabase.ts`; never instantiate `createClient` elsewhere.
 - **Format helpers:** always import `toDisplayLabel` and `splitValues` from `src/lib/format.ts` before rendering any category or protein value.
 - **Featured recipes:** edit `FEATURED_SLUGS` in `index.astro`. Use **hyphen slugs** as stored in the DB (e.g. `sourdough-bread`, not `sourdough_bread`). Order in the array controls display order.
