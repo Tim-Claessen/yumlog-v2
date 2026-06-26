@@ -8,7 +8,8 @@
       "Bash(rmdir _raw_images)",
       "Bash(touch _wip/images/raw/.gitkeep)",
       "Bash(ls -la \"c:\\\\Users\\\\timcl\\\\.repos\\\\yumlog-v2\\\\\" | head -30)",
-      "Read(//c/Users/timcl/.repos/**)"
+      "Read(//c/Users/timcl/.repos/**)",
+      "WebFetch(domain:developers.cloudflare.com)"
     ]
   }
 }

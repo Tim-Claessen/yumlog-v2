@@ -1,0 +1,10 @@
+{
+  // Cloudflare Workers static-assets-only config.
+  // No "main" entry = no Worker script; Cloudflare serves ./dist directly.
+  // No "binding" = no ASSETS programmatic binding needed.
+  "name": "yumlog",
+  "compatibility_date": "2025-01-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
