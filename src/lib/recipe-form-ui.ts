@@ -1,3 +1,4 @@
+import { supabase } from './supabase';
 import { wireIngredientAutocomplete } from './ingredient-autocomplete';
 import { promptIngredientCategories } from './ingredient-category-prompt';
 import type { IngredientSection } from './ingredient-sections';
@@ -115,6 +116,16 @@ export async function initRecipeForm(editSlug: string | null) {
     focusLastInput(ingredientsList);
   });
 
+  if (!editSlug) {
+    initImportPanel({
+      titleEl, categoryEl, proteinEl, cookTimeEl, sourceUrlEl,
+      methodList, tipsList, subsList, ingredientsList,
+      knownIngredients,
+      categories: filterOpts.categories,
+      onIngredientChange,
+    });
+  }
+
   formEl.addEventListener('submit', async (e) => {
     e.preventDefault();
     formError.classList.add('hidden');
@@ -161,6 +172,207 @@ export async function initRecipeForm(editSlug: string | null) {
   function onIngredientChange() {
     // reserved for future live preview
   }
+}
+
+// ── Import from URL ──────────────────────────────────────────────────────────
+
+interface ImportPanelRefs {
+  titleEl: HTMLInputElement;
+  categoryEl: HTMLInputElement | null;
+  proteinEl: HTMLInputElement | null;
+  cookTimeEl: HTMLInputElement | null;
+  sourceUrlEl: HTMLInputElement | null;
+  methodList: HTMLElement;
+  tipsList: HTMLElement;
+  subsList: HTMLElement;
+  ingredientsList: HTMLElement;
+  knownIngredients: string[];
+  categories: string[];
+  onIngredientChange: () => void;
+}
+
+interface ImportedIngredient {
+  quantity: number | null;
+  unit: string;
+  text: string;
+}
+
+interface ImportedRecipe {
+  title: string;
+  category: string | null;
+  protein: string | null;
+  cook_time_min: number | null;
+  ingredients: ImportedIngredient[];
+  method: string[];
+  tips: string[];
+  substitutions: string[];
+}
+
+class ImportError extends Error {}
+
+function initImportPanel(refs: ImportPanelRefs) {
+  const urlInput = document.getElementById('import-url') as HTMLInputElement | null;
+  const importBtn = document.getElementById('import-btn') as HTMLButtonElement | null;
+  const statusEl = document.getElementById('import-status');
+  const errorEl = document.getElementById('import-error');
+  const banner = document.getElementById('import-success-banner');
+  const bannerDismiss = document.getElementById('import-success-dismiss');
+
+  if (!urlInput || !importBtn || !statusEl || !errorEl) return;
+
+  bannerDismiss?.addEventListener('click', () => banner?.classList.add('hidden'));
+
+  importBtn.addEventListener('click', async () => {
+    const url = urlInput.value.trim();
+    errorEl.classList.add('hidden');
+    statusEl.classList.add('hidden');
+
+    if (!url) {
+      errorEl.textContent = 'Paste a recipe URL first.';
+      errorEl.classList.remove('hidden');
+      return;
+    }
+
+    if (formHasContent(refs) && !(await confirmOverwrite())) return;
+
+    importBtn.disabled = true;
+    statusEl.textContent = 'Fetching recipe…';
+    statusEl.classList.remove('hidden');
+
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) {
+        throw new ImportError('Your session has expired — log in again.');
+      }
+
+      const res = await fetch('/api/import-recipe', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const body = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        throw new ImportError(importErrorMessage(res.status, body));
+      }
+
+      const { source_url, recipe } = body as { source_url: string; recipe: ImportedRecipe };
+      populateFromImport(refs, source_url, recipe);
+      banner?.classList.remove('hidden');
+      statusEl.classList.add('hidden');
+    } catch (err) {
+      errorEl.textContent = err instanceof ImportError ? err.message : "Couldn't reach the import service. Try again.";
+      errorEl.classList.remove('hidden');
+      statusEl.classList.add('hidden');
+    } finally {
+      importBtn.disabled = false;
+    }
+  });
+}
+
+function importErrorMessage(status: number, body: unknown): string {
+  const serverMessage =
+    body && typeof body === 'object' && typeof (body as { error?: unknown }).error === 'string'
+      ? (body as { error: string }).error
+      : null;
+
+  if (status === 401) return 'Your session has expired — log in again.';
+  if (status === 400 || status === 422) return "Couldn't read that page — try entering it manually.";
+  if (status === 502) return 'The import service hiccupped — try again.';
+  return serverMessage ?? 'Something went wrong importing that recipe.';
+}
+
+function formHasContent(refs: ImportPanelRefs): boolean {
+  if (refs.titleEl.value.trim()) return true;
+  if (refs.categoryEl?.value.trim()) return true;
+  if (refs.proteinEl?.value.trim()) return true;
+  if (refs.cookTimeEl?.value.trim()) return true;
+  if (refs.sourceUrlEl?.value.trim()) return true;
+  if (readTextInputs(refs.methodList, '.method-input').some(v => v.trim())) return true;
+  if (readTextInputs(refs.tipsList, '.tip-input').some(v => v.trim())) return true;
+  if (readTextInputs(refs.subsList, '.sub-input').some(v => v.trim())) return true;
+  if (readIngredientRows(refs.ingredientsList).some(r => r.name.trim() || r.quantity.trim())) return true;
+  return false;
+}
+
+function confirmOverwrite(): Promise<boolean> {
+  return new Promise(resolve => {
+    const dialog = document.createElement('div');
+    dialog.className = 'fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-labelledby', 'import-overwrite-title');
+    dialog.innerHTML = `
+      <div class="absolute inset-0 bg-on-surface/25 backdrop-blur-[2px]" data-dialog-backdrop></div>
+      <div class="relative w-full sm:max-w-sm bg-surface rounded-2xl border border-outline-soft shadow-xl overflow-hidden">
+        <div class="bg-primary-container/40 px-5 pt-5 pb-4">
+          <p class="text-xs font-medium text-on-surface-muted uppercase tracking-widest mb-1">Just checking</p>
+          <h2 id="import-overwrite-title" class="font-serif text-xl font-bold text-on-surface leading-snug">Replace what you've entered?</h2>
+        </div>
+        <div class="px-5 py-4">
+          <p class="text-sm text-on-surface-muted leading-relaxed">Importing will overwrite the fields you've already filled in.</p>
+        </div>
+        <div class="px-5 pb-5 pt-2 flex gap-3 border-t border-outline-soft/40">
+          <button type="button" data-cancel class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-on-surface-muted bg-surface-container hover:bg-surface-container/80 transition-colors">
+            Cancel
+          </button>
+          <button type="button" data-confirm class="flex-1 rounded-xl px-4 py-2.5 text-sm font-medium text-on-primary bg-primary hover:opacity-90 transition-opacity">
+            Import anyway
+          </button>
+        </div>
+      </div>
+    `;
+
+    function close(result: boolean) {
+      dialog.remove();
+      document.body.style.overflow = '';
+      resolve(result);
+    }
+
+    dialog.querySelector('[data-dialog-backdrop]')?.addEventListener('click', () => close(false));
+    dialog.querySelector('[data-cancel]')?.addEventListener('click', () => close(false));
+    dialog.querySelector('[data-confirm]')?.addEventListener('click', () => close(true));
+
+    document.body.style.overflow = 'hidden';
+    document.body.appendChild(dialog);
+  });
+}
+
+function populateFromImport(refs: ImportPanelRefs, sourceUrl: string, recipe: ImportedRecipe) {
+  refs.titleEl.value = recipe.title ?? '';
+
+  if (refs.categoryEl) {
+    refs.categoryEl.value = recipe.category && refs.categories.includes(recipe.category) ? recipe.category : '';
+  }
+  if (refs.proteinEl) refs.proteinEl.value = recipe.protein ?? '';
+  if (refs.cookTimeEl) refs.cookTimeEl.value = recipe.cook_time_min != null ? String(recipe.cook_time_min) : '';
+  if (refs.sourceUrlEl) refs.sourceUrlEl.value = sourceUrl ?? '';
+
+  renderMethodSteps(refs.methodList, recipe.method ?? []);
+  renderTextLines(refs.tipsList, recipe.tips ?? [], 'tip');
+  renderTextLines(refs.subsList, recipe.substitutions ?? [], 'sub');
+
+  const ingredientRows = (recipe.ingredients ?? []).map(ing => ({
+    quantity: ing.quantity != null ? String(ing.quantity) : '',
+    unit: normaliseImportUnit(ing.unit),
+    name: ing.text,
+    pickedCanonical: null,
+  }));
+  renderIngredients(
+    refs.ingredientsList,
+    ingredientRows.length > 0 ? ingredientRows : [emptyIngredientRow()],
+    refs.knownIngredients,
+    refs.onIngredientChange,
+  );
+}
+
+function normaliseImportUnit(unit: string): string {
+  return (UNIT_OPTIONS as readonly string[]).includes(unit) ? unit : 'each';
 }
 
 function populateScalars(

@@ -16,6 +16,7 @@ Hosted on Cloudflare Pages (GitHub repo [`Tim-Claessen/yumlog-v2`](https://githu
 - **Auth-gated editing** — create and edit recipes, manage a shared shopping list, and maintain the ingredient registry (Tim + Zoe only; sign-ups disabled).
 - **Shopping list** — aisle grouping, drag reorder, unit conversion, realtime sync between devices.
 - **Ingredient registry** — canonical names, shopping sections, rename/merge/delete admin at `/settings/ingredients`.
+- **Recipe import** — paste a URL on the create page to pre-fill the form from JSON-LD (or page text) via a Cloudflare Pages Function backed by Workers AI.
 
 ## Local development
 

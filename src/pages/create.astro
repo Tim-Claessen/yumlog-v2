@@ -13,6 +13,49 @@ import Layout from '../layouts/Layout.astro';
       <p class="text-sm text-on-surface-muted">Add a recipe to the cookbook.</p>
     </header>
 
+    <section id="import-panel" class="bg-surface border border-outline-soft rounded-2xl p-4 sm:p-5 mb-6 flex flex-col gap-3">
+      <div>
+        <h2 class="text-sm font-semibold text-on-surface">Import from URL</h2>
+        <p class="text-xs text-on-surface-muted mt-0.5">Paste a recipe link and we'll pre-fill the form below.</p>
+      </div>
+      <div class="flex flex-col sm:flex-row gap-2">
+        <input
+          id="import-url"
+          type="url"
+          inputmode="url"
+          placeholder="https://example.com/recipe"
+          class="flex-1 bg-surface-container/50 border border-transparent rounded-xl px-3 py-2.5 text-sm text-on-surface-muted placeholder:text-on-surface-muted/70 focus:text-on-surface focus:bg-surface-container focus:border-outline-soft/60 focus:outline-none transition-colors"
+        />
+        <button
+          type="button"
+          id="import-btn"
+          class="bg-primary text-on-primary rounded-xl px-5 py-2.5 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 shrink-0"
+        >
+          Import
+        </button>
+      </div>
+      <p id="import-status" class="hidden text-xs text-on-surface-muted" role="status"></p>
+      <p id="import-error" class="hidden text-xs text-primary" role="alert"></p>
+    </section>
+
+    <div
+      id="import-success-banner"
+      class="hidden bg-secondary-container rounded-2xl px-4 py-3 mb-6 flex items-start justify-between gap-3"
+      role="status"
+    >
+      <p class="text-sm text-on-secondary-container leading-relaxed">
+        <span class="font-medium">Imported.</span> Give it a quick check before saving.
+      </p>
+      <button
+        type="button"
+        id="import-success-dismiss"
+        class="shrink-0 text-on-secondary-container/70 hover:text-on-secondary-container"
+        aria-label="Dismiss"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+
     <form id="recipe-form" class="flex flex-col gap-8">
       <!-- Basics -->
       <section class="bg-surface-low rounded-2xl p-5 flex flex-col gap-4">
@@ -161,6 +204,11 @@ import Layout from '../layouts/Layout.astro';
   const content = document.getElementById('auth-content');
 
   const editSlug = new URLSearchParams(window.location.search).get('edit');
+
+  if (editSlug) {
+    document.getElementById('import-panel')?.remove();
+    document.getElementById('import-success-banner')?.remove();
+  }
 
   requireAuth().then(async ok => {
     if (!ok || !checking || !content) return;

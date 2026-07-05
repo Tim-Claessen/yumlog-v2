@@ -9,7 +9,13 @@
       "Bash(touch _wip/images/raw/.gitkeep)",
       "Bash(ls -la \"c:\\\\Users\\\\timcl\\\\.repos\\\\yumlog-v2\\\\\" | head -30)",
       "Read(//c/Users/timcl/.repos/**)",
-      "WebFetch(domain:developers.cloudflare.com)"
+      "WebFetch(domain:developers.cloudflare.com)",
+      "Bash(npx -y tsx test-import-recipe.mts)",
+      "Bash(npx --yes -p typescript tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler functions/api/import-recipe.ts functions/lib/recipe-normaliser.ts functions/lib/recipe-categories.ts)",
+      "Bash(npx --yes -p typescript tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --skipLibCheck --ignoreConfig functions/api/import-recipe.ts functions/lib/recipe-normaliser.ts functions/lib/recipe-categories.ts)",
+      "Bash(npx astro *)",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)"
     ]
   }
 }

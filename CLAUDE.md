@@ -443,6 +443,71 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
 
 ---
 
+## Recipe import (server-side)
+
+**`functions/api/import-recipe.ts`** is the **only server-side code in the project.** Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
+
+It's a **Cloudflare Pages Function** (`POST /api/import-recipe`), deployed alongside the static site — no separate Worker.
+
+### Auth
+
+Reuses the existing Supabase session — the client (`initImportPanel` in `src/lib/recipe-form-ui.ts`) sends `Authorization: Bearer <access_token>` from the current session. The Function validates that token by calling `${PUBLIC_SUPABASE_URL}/auth/v1/user` with the anon key; a non-200 response is treated as unauthorized. Since public sign-ups are disabled, this is effectively Tim/Zoe-only, same as the rest of the write paths.
+
+### Request / response contract
+
+```
+POST /api/import-recipe
+Authorization: Bearer <supabase access token>
+Content-Type: application/json
+
+{ "url": "https://example.com/some-recipe" }
+```
+
+Success (`200`):
+
+```jsonc
+{
+  "source_url": "https://example.com/some-recipe",
+  "recipe": {
+    "title": "string",
+    "category": "string | null",        // existing slug or null — never invented
+    "protein": "string | null",         // slug(s), comma-separated
+    "cook_time_min": 45,
+    "ingredients": [ { "quantity": 2, "unit": "cup", "text": "plain flour, sifted" } ],
+    "method": ["Label: step text", "step text"],
+    "tips": ["..."],
+    "substitutions": ["..."]
+  }
+}
+```
+
+Errors are `{ "error": "message" }` with status `400` (bad body / invalid or disallowed URL), `401` (unauthorized), `405` (non-POST), `422` (couldn't fetch the page), `500` (server misconfigured — missing Supabase env), or `502` (LLM couldn't produce valid JSON after retry). Keep this shape stable — `recipe-form-ui.ts` depends on it directly.
+
+### SSRF guard
+
+`validateTargetUrl()` only allows `http`/`https`, rejects `localhost`/`.local` hostnames, rejects private/loopback/link-local/CGNAT IPv4 (`127.0.0.0/8`, `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`, `169.254.0.0/16`, `100.64.0.0/10`, `0.0.0.0/8`) and loopback/link-local/unique-local IPv6, and rejects non-standard ports (only `80`/`443`). The fetch itself is capped at a 10s timeout and 2 MB of response body.
+
+### Pipeline: JSON-LD first, LLM to normalise
+
+1. Fetch the target page HTML (`fetchPage`).
+2. Extract `<script type="application/ld+json">` blocks and search them (including `@graph`) for a node whose `@type` includes `Recipe`.
+3. If found, build a raw recipe straight from schema.org fields — `recipeIngredient`, `recipeInstructions` (including `HowToSection`/`HowToStep`, flattened with section labels), ISO 8601 `cookTime`/`totalTime` parsed to minutes, `recipeCategory`/`keywords` as a category hint.
+4. If no JSON-LD `Recipe` node exists, fall back to stripped/decoded plain page text (capped at 15k chars) as the input instead.
+5. Either shape is passed to `normaliseRecipe()` (`functions/lib/recipe-normaliser.ts`), which prompts a Workers AI model (`@cf/meta/llama-3.1-8b-instruct`) to emit JSON matching the app's recipe shape — one retry if the first reply isn't valid JSON.
+6. `functions/lib/recipe-categories.ts` fetches the distinct existing `recipes.category` values (public anon key, best-effort) beforehand so the model reuses an existing slug instead of inventing one.
+
+The imported recipe only pre-fills the create form — it is not saved until Tim/Zoe review and submit normally, going through the usual client-side save path (ingredient upsert, category prompts, etc.).
+
+### Workers AI binding
+
+`wrangler.jsonc` declares `"ai": { "binding": "AI" }` — required for `env.AI.run(...)` to work. This is Cloudflare-specific config with no Astro equivalent; it has no effect on the static build.
+
+### Local dev requires `wrangler pages dev`
+
+Pages Functions do **not** run under Astro's dev server — `npm run dev` will not serve `/api/import-recipe` (404). To test the import endpoint locally: `npm run build` then `npx wrangler pages dev dist` (or equivalent), which serves the built site through Cloudflare's local runtime with the `AI` binding and Function routes available. Local env vars for the Function go in a wrangler `.dev.vars` file, not `.env` (that one is Astro/Vite-only).
+
+---
+
 ## Repo layout
 
 ```
@@ -453,6 +518,12 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
   .env                   ← Supabase URL + anon key (gitignored)
 /docs/
   brand-hearth.md        ← Hearth brand guide (colours, type, component patterns)
+/functions/              ← Cloudflare Pages Functions — only server-side code in the project
+  /api/
+    import-recipe.ts     ← POST /api/import-recipe: auth check, fetch + SSRF guard, JSON-LD/LLM pipeline
+  /lib/
+    recipe-normaliser.ts ← Workers AI prompt + response validation (normaliseRecipe)
+    recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
 /scripts/
   ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
   check-supabase-schema.mjs    ← verify expected columns and RPCs against live Supabase
