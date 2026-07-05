@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { wireIngredientAutocomplete } from './ingredient-autocomplete';
 import { promptIngredientCategories } from './ingredient-category-prompt';
+import { normalizeIngredient } from './ingredient';
 import type { IngredientSection } from './ingredient-sections';
 import {
   collectCanonicalNames,
@@ -524,6 +525,7 @@ function addIngredientRow(
     <div class="relative min-w-0">
       <input type="text" class="ing-name ${inputClass}" value="${escapeAttr(row.name)}" placeholder="Ingredient" autocomplete="off" />
       <ul class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-surface border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"></ul>
+      <p class="new-ingredient-hint hidden text-[11px] text-secondary mt-1">New ingredient — you'll pick a shopping aisle when you save.</p>
     </div>
     <button type="button" class="remove-row ${btnIcon} mt-0.5" aria-label="Remove ingredient">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -532,10 +534,18 @@ function addIngredientRow(
 
   const nameInput = el.querySelector('.ing-name') as HTMLInputElement;
   const list = el.querySelector('.autocomplete-list') as HTMLUListElement;
+  const hint = el.querySelector('.new-ingredient-hint') as HTMLParagraphElement;
+
+  function refreshNewIngredientHint() {
+    const name = nameInput.value.trim();
+    const isNew = !!name && !el.dataset.pickedCanonical && !known.includes(normalizeIngredient(name));
+    hint.classList.toggle('hidden', !isNew);
+  }
 
   wireIngredientAutocomplete(nameInput, list, known, (ing) => {
     nameInput.value = ing;
     el.dataset.pickedCanonical = ing;
+    refreshNewIngredientHint();
     onChange();
   });
 
@@ -546,9 +556,11 @@ function addIngredientRow(
 
   nameInput.addEventListener('input', () => {
     delete el.dataset.pickedCanonical;
+    refreshNewIngredientHint();
     onChange();
   });
 
+  refreshNewIngredientHint();
   container.appendChild(el);
 }
 

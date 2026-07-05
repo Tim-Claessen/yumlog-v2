@@ -75,12 +75,13 @@ import Layout from '../layouts/Layout.astro';
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <label class="flex flex-col gap-1">
-            <span class="text-xs font-medium text-on-surface-muted">Category</span>
+            <span class="text-xs font-medium text-on-surface-muted">Category <span class="text-primary">*</span></span>
             <input
               id="category"
               name="category"
               type="text"
               list="category-options"
+              required
               placeholder="e.g. sweet_treat"
               class="w-full bg-surface border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
             />
@@ -88,13 +89,14 @@ import Layout from '../layouts/Layout.astro';
           </label>
 
           <label class="flex flex-col gap-1">
-            <span class="text-xs font-medium text-on-surface-muted">Cook time (minutes)</span>
+            <span class="text-xs font-medium text-on-surface-muted">Cook time (minutes) <span class="text-primary">*</span></span>
             <input
               id="cook-time"
               name="cook_time_min"
               type="number"
               min="0"
               step="1"
+              required
               placeholder="45"
               class="w-full bg-surface border border-outline-soft rounded-2xl px-4 py-3 text-sm text-on-surface placeholder:text-outline focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-colors"
             />

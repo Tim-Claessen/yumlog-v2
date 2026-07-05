@@ -230,6 +230,12 @@ export async function saveRecipe(
   const title = form.title.trim();
   if (!title) throw new Error('Title is required');
 
+  const category = form.category.trim();
+  if (!category) throw new Error('Category is required');
+
+  const cookTimeMin = form.cookTimeMin.trim();
+  if (!cookTimeMin) throw new Error('Cook time is required');
+
   const methodSteps = form.methodSteps.map(s => s.trim()).filter(Boolean);
   if (methodSteps.length === 0) throw new Error('Add at least one method step');
 
@@ -271,9 +277,9 @@ export async function saveRecipe(
   const recipePayload = {
     slug,
     title,
-    category: form.category.trim() || null,
+    category,
     protein: form.protein.trim() || null,
-    cook_time_min: form.cookTimeMin.trim() ? Number(form.cookTimeMin) : null,
+    cook_time_min: Number(cookTimeMin),
     method: methodSteps.join('\n'),
     tips: linesFromList(form.tips),
     substitutions: linesFromList(form.substitutions),
