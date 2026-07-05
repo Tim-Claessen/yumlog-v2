@@ -56,7 +56,7 @@ const FRIENDLY_FAILURE_MESSAGE =
 
 // A current small instruct model. Swap this (and runModel below) to change
 // provider/model without touching the calling Function.
-const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct";
+const MODEL_ID = "@cf/meta/llama-3.1-8b-instruct-fp8";
 
 const ALLOWED_UNITS = [
   "g", "kg", "mg", "ml", "l", "tsp", "tbsp", "cup", "oz", "lb",

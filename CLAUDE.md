@@ -404,9 +404,28 @@ Set the same variables in the Cloudflare project → **Settings** → **Variable
 
 ---
 
-## Deployment (Cloudflare Workers, Git-connected)
+## Deployment (Cloudflare Workers — NOT classic Pages)
 
-Hosted as a **Cloudflare Worker** (the unified Workers-Builds Git integration), connected to GitHub repo `Tim-Claessen/yumlog-v2` — **not** the classic Pages product. This matters: Pages' auto-routing of a `functions/` directory into routes is a Pages-only convention and does **not** apply here. Server-side routes must be dispatched manually from `worker.ts` (the `main` entrypoint in `wrangler.jsonc`), which checks the request path and either calls the matching handler (e.g. `functions/api/import-recipe.ts`'s `onRequest`) or falls back to `env.ASSETS.fetch(request)` to serve the static build. If you ever see the import endpoint (or any new `/api/*` route) 404 in production, check `worker.ts` first — it's the only place routes are wired up.
+> **Read this section before touching anything Cloudflare-related.** This project has been misdiagnosed as "Cloudflare Pages" more than once, which sent troubleshooting in the wrong direction. Get this wrong and you'll go looking for dashboard tabs ("Functions", "Bindings") that don't exist for this project type, and waste time on Pages-specific docs/behavior that don't apply here.
+
+**The facts, stated plainly:**
+
+1. This is hosted as a **Cloudflare Worker**, deployed via Cloudflare's **Workers-Builds Git integration** (connect-a-repo, auto-build-on-push) — a different product from **Cloudflare Pages**, even though both live under the same "Workers & Pages" dashboard section and both can be Git-connected. Do not assume Pages behavior or Pages dashboard layout.
+2. Static output (`dist/`, from `astro build`) is served via the `assets` binding declared in `wrangler.jsonc` — there is no Astro Cloudflare adapter and no SSR.
+3. **`functions/api/import-recipe.ts` does NOT auto-route.** File-based auto-routing of a `functions/` directory into `/api/*` paths is a **Pages-only** convention. On this project, it does nothing by itself.
+4. The **only** thing that makes `/api/import-recipe` reachable is `worker.ts` (repo root) — the `main` entrypoint declared in `wrangler.jsonc`. It's a plain `fetch(request, env)` handler that checks the URL path, calls the matching function's exported `onRequest({ request, env })` for known API paths, and falls back to `env.ASSETS.fetch(request)` (serving the static build) for everything else.
+5. **Adding a new server-side route?** Write the handler under `functions/` in Pages-Function style (`export const onRequest = async ({ request, env }) => ...`) for consistency, but you **must** also add a branch for its path in `worker.ts`, or it will 404 in production forever, silently, with no error anywhere.
+
+**How to verify any of this yourself** (works whether or not you can find the right dashboard page):
+
+```bash
+npm run build
+npx wrangler deploy --dry-run   # prints the exact bindings (AI, ASSETS, etc.) Cloudflare will see — no deploy happens
+npx wrangler dev                # runs worker.ts + the static build locally at http://127.0.0.1:8787
+```
+`wrangler dev` is the fastest way to catch a routing mistake before it ever reaches production — hit the route with `curl` and check the status code (404 = not wired in `worker.ts`; 401/405/etc. = it's reaching the handler).
+
+**If the Cloudflare dashboard doesn't show a "Functions" or "Bindings" tab** for this project — that's expected for a Workers-Builds project, not a sign something is broken. Bindings (`AI`, `ASSETS`) come from `wrangler.jsonc` directly; there's no dashboard step required to "turn them on" for this project type. Use `wrangler deploy --dry-run` above instead of hunting for a dashboard page.
 
 ### Build settings
 
@@ -415,8 +434,6 @@ Hosted as a **Cloudflare Worker** (the unified Workers-Builds Git integration), 
 | Build command | `npm run build` |
 | Build output directory | `dist` |
 | Root directory | `/` (repo root) |
-
-No Astro Cloudflare adapter — plain static output from `astro build`, served via the `assets` binding in `wrangler.jsonc`. `worker.ts` only intercepts specific API paths; everything else (including all pre-rendered recipe pages) is served directly from the static build.
 
 ### Automatic rebuilds on recipe changes
 
