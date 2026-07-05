@@ -534,6 +534,7 @@ function addIngredientRow(
   const list = el.querySelector('.autocomplete-list') as HTMLUListElement;
 
   wireIngredientAutocomplete(nameInput, list, known, (ing) => {
+    nameInput.value = ing;
     el.dataset.pickedCanonical = ing;
     onChange();
   });
