@@ -8,7 +8,7 @@ A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of
 
 | Layer     | Technology                                                          |
 | --------- | ------------------------------------------------------------------- |
-| Frontend  | Astro 6, deployed to **Cloudflare Pages**                           |
+| Frontend  | Astro 6, deployed to **Cloudflare Workers** (static assets + a thin routing worker — see **Deployment**) |
 | Styling   | Tailwind CSS 4 (via `@tailwindcss/vite`, not `@astrojs/tailwind`)   |
 | Backend   | Supabase (Postgres + Auth)                                          |
 | DB client | `@supabase/supabase-js` 2                                           |
@@ -400,13 +400,13 @@ PUBLIC_SUPABASE_URL=https://nrmimftrjulvsgonrlzg.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<JWT anon key — see .env, never commit>
 ```
 
-Set the same variables in **Cloudflare Pages** → project → **Settings** → **Environment variables** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
+Set the same variables in the Cloudflare project → **Settings** → **Variables and Secrets** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
 
 ---
 
-## Deployment (Cloudflare Pages)
+## Deployment (Cloudflare Workers, Git-connected)
 
-Hosted at **Cloudflare Pages**, connected to GitHub repo `Tim-Claessen/yumlog-v2`.
+Hosted as a **Cloudflare Worker** (the unified Workers-Builds Git integration), connected to GitHub repo `Tim-Claessen/yumlog-v2` — **not** the classic Pages product. This matters: Pages' auto-routing of a `functions/` directory into routes is a Pages-only convention and does **not** apply here. Server-side routes must be dispatched manually from `worker.ts` (the `main` entrypoint in `wrangler.jsonc`), which checks the request path and either calls the matching handler (e.g. `functions/api/import-recipe.ts`'s `onRequest`) or falls back to `env.ASSETS.fetch(request)` to serve the static build. If you ever see the import endpoint (or any new `/api/*` route) 404 in production, check `worker.ts` first — it's the only place routes are wired up.
 
 ### Build settings
 
@@ -416,13 +416,13 @@ Hosted at **Cloudflare Pages**, connected to GitHub repo `Tim-Claessen/yumlog-v2
 | Build output directory | `dist` |
 | Root directory | `/` (repo root) |
 
-No Cloudflare adapter — plain static output from `astro build`.
+No Astro Cloudflare adapter — plain static output from `astro build`, served via the `assets` binding in `wrangler.jsonc`. `worker.ts` only intercepts specific API paths; everything else (including all pre-rendered recipe pages) is served directly from the static build.
 
 ### Automatic rebuilds on recipe changes
 
 Recipes are pre-rendered at build time (see **Critical rendering rule**). After create/edit in the app, the DB updates immediately; static HTML updates when Cloudflare finishes the next deploy (~2–3 min).
 
-**Cloudflare deploy hook** — Pages project → **Settings** → **Builds & deployments** → **Deploy hooks**. Create a hook on the production branch (`main`). Copy the secret POST URL.
+**Cloudflare deploy hook** — project → **Settings** → **Builds** → **Deploy hooks** (or equivalent — Cloudflare has moved this around; look under Build/Deployments settings). Create a hook on the production branch (`main`). Copy the secret POST URL.
 
 **Supabase database webhook** — **Database** → **Webhooks** → create webhook:
 
@@ -447,7 +447,7 @@ Git pushes to `main` also trigger builds; the webhook covers DB-only changes fro
 
 **`functions/api/import-recipe.ts`** is the **only server-side code in the project.** Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
 
-It's a **Cloudflare Pages Function** (`POST /api/import-recipe`), deployed alongside the static site — no separate Worker.
+It's a handler (`POST /api/import-recipe`) written in Pages-Function style (`onRequest({ request, env })`) but manually dispatched from `worker.ts` — see **Deployment (Cloudflare Workers, Git-connected)** above for why that dispatch step exists.
 
 ### Auth
 
@@ -502,9 +502,9 @@ The imported recipe only pre-fills the create form — it is not saved until Tim
 
 `wrangler.jsonc` declares `"ai": { "binding": "AI" }` — required for `env.AI.run(...)` to work. This is Cloudflare-specific config with no Astro equivalent; it has no effect on the static build.
 
-### Local dev requires `wrangler pages dev`
+### Local dev requires `wrangler dev`
 
-Pages Functions do **not** run under Astro's dev server — `npm run dev` will not serve `/api/import-recipe` (404). To test the import endpoint locally: `npm run build` then `npx wrangler pages dev dist` (or equivalent), which serves the built site through Cloudflare's local runtime with the `AI` binding and Function routes available. Local env vars for the Function go in a wrangler `.dev.vars` file, not `.env` (that one is Astro/Vite-only).
+The import endpoint does **not** run under Astro's dev server — `npm run dev` will not serve `/api/import-recipe` (404). To test it locally: `npm run build` then `npx wrangler dev`, which runs `worker.ts` (routing `/api/import-recipe` to the handler, everything else to the static `dist` build) through Cloudflare's local runtime, with the `AI` and `ASSETS` bindings available. Local env vars go in `.dev.vars` (gitignored), not `.env` (that one is Astro/Vite-only).
 
 ---
 
@@ -515,10 +515,13 @@ Pages Functions do **not** run under Astro's dev server — `npm run dev` will n
   astro.config.mjs       ← Tailwind wired via vite.plugins: [tailwindcss()]
   package.json
   tsconfig.json
+  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding
+  worker.ts               ← Worker entrypoint — manually dispatches /api/* routes, falls back to ASSETS (see Deployment)
   .env                   ← Supabase URL + anon key (gitignored)
+  .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
 /docs/
   brand-hearth.md        ← Hearth brand guide (colours, type, component patterns)
-/functions/              ← Cloudflare Pages Functions — only server-side code in the project
+/functions/              ← Server-side route handlers, written Pages-Function style but dispatched manually from worker.ts (see Deployment)
   /api/
     import-recipe.ts     ← POST /api/import-recipe: auth check, fetch + SSRF guard, JSON-LD/LLM pipeline
   /lib/

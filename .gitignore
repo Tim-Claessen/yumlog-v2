@@ -8,10 +8,14 @@ dist/
 .astro/
 node_modules/
 
+# Wrangler local dev cache/bundle output
+.wrangler/
+
 # Environment — never commit secrets
 .env
 .env.local
 .env.*.local
+.dev.vars
 
 # Python venv
 .venv/
