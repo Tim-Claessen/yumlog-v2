@@ -68,9 +68,10 @@ const ALLOWED_UNITS = [
 export async function normaliseRecipe(
   input: NormaliseInput,
   env: { AI: AiBinding },
-  existingCategories: string[]
+  existingCategories: string[],
+  existingIngredients: string[] = []
 ): Promise<NormalisedRecipe> {
-  const messages = buildMessages(input, existingCategories);
+  const messages = buildMessages(input, existingCategories, existingIngredients);
 
   const first = await runModel(env, messages);
   const parsedFirst = tryParse(first);
@@ -115,17 +116,20 @@ async function runModel(
 
 function buildMessages(
   input: NormaliseInput,
-  existingCategories: string[]
+  existingCategories: string[],
+  existingIngredients: string[]
 ): { role: "system" | "user"; content: string }[] {
   return [
-    { role: "system", content: buildSystemPrompt(existingCategories) },
+    { role: "system", content: buildSystemPrompt(existingCategories, existingIngredients) },
     { role: "user", content: buildUserContent(input) },
   ];
 }
 
-function buildSystemPrompt(existingCategories: string[]): string {
+function buildSystemPrompt(existingCategories: string[], existingIngredients: string[]): string {
   const categoryList =
     existingCategories.length > 0 ? existingCategories.map((c) => `"${c}"`).join(", ") : "(none yet)";
+  const ingredientList =
+    existingIngredients.length > 0 ? existingIngredients.map((i) => `"${i}"`).join(", ") : "(none yet)";
 
   return `You turn a scraped recipe (structured data or raw page text) into clean, normalised JSON for a recipe app.
 
@@ -150,7 +154,7 @@ Rules:
 - "ingredients": one entry per ingredient line.
   - "quantity": a number, or null if no quantity is given.
   - "unit": one of: ${ALLOWED_UNITS.join(", ")}. Use "each" for countable items (e.g. "2 eggs" -> quantity 2, unit "each"). If nothing else fits, pick the closest unit from this list rather than inventing a new one.
-  - "text": the ingredient exactly as written by the recipe author (e.g. "plain flour, sifted"), minus the quantity/unit. Do not rename or standardise the ingredient name — the app normalises that separately.
+  - "text": the ingredient exactly as written by the recipe author (e.g. "plain flour, sifted"), minus the quantity/unit. Do not rename or standardise the ingredient name — the app normalises that separately. Exception: if the ingredient is clearly the same thing as one of these already-known ingredient names, reuse that exact wording (still keeping any prep note like ", sifted" or ", diced" from the source) instead of the source site's own variant spelling — this avoids creating near-duplicate entries: [${ingredientList}]
 - "method": one array entry per step, in order. No leading numbers. A step may start with a short label followed by a colon (e.g. "Rest: leave the dough for 10 minutes."); only add a label if the source text implies one.
 - "tips": one array entry per tip, no leading bullets or dashes. Empty array if there are none.
 - "substitutions": one array entry per substitution, no leading bullets or dashes. Empty array if there are none.

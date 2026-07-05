@@ -252,7 +252,7 @@ function initImportPanel(refs: ImportPanelRefs) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify({ url, known_ingredients: refs.knownIngredients }),
       });
 
       const body = await res.json().catch(() => null);

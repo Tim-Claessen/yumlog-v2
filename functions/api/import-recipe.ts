@@ -28,6 +28,7 @@ interface RequestContext {
 const FETCH_TIMEOUT_MS = 10_000;
 const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 const MAX_PAGE_TEXT_CHARS = 15_000;
+const MAX_KNOWN_INGREDIENTS = 500;
 const BROWSER_USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
@@ -59,6 +60,8 @@ export const onRequest = async (context: RequestContext): Promise<Response> => {
     return jsonResponse({ error: 'Request body must include a "url" string.' }, 400);
   }
 
+  const knownIngredients = parseKnownIngredients((body as { known_ingredients?: unknown } | null)?.known_ingredients);
+
   const validated = validateTargetUrl(rawUrl.trim());
   if (!validated.ok) {
     return jsonResponse({ error: validated.message }, 400);
@@ -79,7 +82,7 @@ export const onRequest = async (context: RequestContext): Promise<Response> => {
   const existingCategories = await fetchExistingCategories(env);
 
   try {
-    const recipe = await normaliseRecipe(normaliseInput, env, existingCategories);
+    const recipe = await normaliseRecipe(normaliseInput, env, existingCategories, knownIngredients);
     return jsonResponse({ source_url: validated.url.toString(), recipe });
   } catch (err) {
     if (err instanceof RecipeNormalisationError) {
@@ -88,6 +91,23 @@ export const onRequest = async (context: RequestContext): Promise<Response> => {
     return jsonResponse({ error: "Something went wrong while importing that recipe." }, 502);
   }
 };
+
+// Client sends its already-fetched `ingredients.name` list so the LLM can
+// bias ingredient text toward names already in the registry. Untrusted
+// input — validate shape and cap size before it reaches the prompt.
+function parseKnownIngredients(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+
+  const names = new Set<string>();
+  for (const item of value) {
+    if (typeof item !== "string") continue;
+    const trimmed = item.trim();
+    if (!trimmed) continue;
+    names.add(trimmed);
+    if (names.size >= MAX_KNOWN_INGREDIENTS) break;
+  }
+  return [...names].sort();
+}
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {

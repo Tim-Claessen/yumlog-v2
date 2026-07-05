@@ -477,8 +477,13 @@ POST /api/import-recipe
 Authorization: Bearer <supabase access token>
 Content-Type: application/json
 
-{ "url": "https://example.com/some-recipe" }
+{
+  "url": "https://example.com/some-recipe",
+  "known_ingredients": ["brown onion", "plain flour", "..."]  // optional
+}
 ```
+
+`known_ingredients` is the client's already-fetched list of canonical `ingredients.name` values (`fetchKnownIngredients()`), sent so the normalisation prompt can bias ingredient text toward names already in the registry instead of the source site's own wording — reducing near-duplicate canonical entries. Untrusted client input: the Function validates it's a string array and caps it at 500 entries before it reaches the prompt. Optional — omitting it (or sending `[]`) just means the model has no existing names to prefer.
 
 Success (`200`):
 
