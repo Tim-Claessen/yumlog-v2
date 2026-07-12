@@ -15,7 +15,16 @@
       "Bash(npx --yes -p typescript tsc --noEmit --strict --target es2022 --module esnext --moduleResolution bundler --skipLibCheck --ignoreConfig functions/api/import-recipe.ts functions/lib/recipe-normaliser.ts functions/lib/recipe-categories.ts)",
       "Bash(npx astro *)",
       "Bash(npx tsc *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "PowerShell(npm run build)",
+      "PowerShell(npm install)",
+      "PowerShell(npx wrangler dev --test-scheduled)",
+      "Bash(seq 1 30)",
+      "Bash(curl -s -o /dev/null -m 2 \"http://127.0.0.1:8787/\")",
+      "Bash(break)",
+      "Bash(sleep 1)",
+      "Bash(curl -s \"http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*\")",
+      "PowerShell(npx wrangler deploy --dry-run)"
     ]
   }
 }

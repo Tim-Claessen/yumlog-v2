@@ -17,6 +17,11 @@ interface Env {
   AI: AiBinding;
 }
 
+interface ScheduledEvent {
+  cron: string;
+  scheduledTime: number;
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -26,5 +31,23 @@ export default {
     }
 
     return env.ASSETS.fetch(request);
+  },
+
+  // Keep-alive: a lightweight REST read counts as Supabase API activity,
+  // preventing the free-tier project from being auto-paused for inactivity.
+  // Schedule lives in wrangler.jsonc ("triggers").
+  async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
+    const res = await fetch(
+      `${env.PUBLIC_SUPABASE_URL}/rest/v1/recipes?select=slug&limit=1`,
+      {
+        headers: {
+          apikey: env.PUBLIC_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${env.PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+      },
+    );
+    if (!res.ok) {
+      console.error(`Supabase keep-alive ping failed: ${res.status}`);
+    }
   },
 };
