@@ -6,14 +6,15 @@ import '../styles/global.css';
 
 interface Props {
   title?: string;
-  activeNav?: 'recipes' | 'shopping' | 'create' | 'settings';
+  activeNav?: 'recipes' | 'sourdough' | 'shopping' | 'create' | 'settings';
 }
 
 const { title = 'Yumlog', activeNav = 'recipes' } = Astro.props;
 const pageTitle = title === 'Yumlog' ? 'Yumlog' : `${title} — Yumlog`;
 
 const publicNavItems = [
-  { id: 'recipes', href: '/', label: 'Recipes' },
+  { id: 'recipes',   href: '/',          label: 'Recipes' },
+  { id: 'sourdough', href: '/sourdough', label: 'Sourdough' },
 ] as const;
 
 const authNavItems = [
@@ -131,10 +132,17 @@ const settingsNavItem = {
                 active ? 'text-primary' : 'text-on-surface-muted',
               ].join(' ')}
             >
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-              </svg>
-              <span>{item.label}</span>
+              {item.id === 'recipes' && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+              )}
+              {item.id === 'sourdough' && (
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M3 13a9 5 0 0 1 18 0v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M8.5 11.5 7 15"/><path d="M12 11 10.5 15"/><path d="M15.5 11.5 14 15"/>
+                </svg>
+              )}
+              <span class="whitespace-nowrap">{item.label}</span>
             </a>
           );
         })}

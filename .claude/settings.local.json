@@ -24,7 +24,9 @@
       "Bash(break)",
       "Bash(sleep 1)",
       "Bash(curl -s \"http://127.0.0.1:8787/__scheduled?cron=0+3+*+*+*\")",
-      "PowerShell(npx wrangler deploy --dry-run)"
+      "PowerShell(npx wrangler deploy --dry-run)",
+      "WebSearch",
+      "Bash(npx --yes playwright --version)"
     ]
   }
 }

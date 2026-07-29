@@ -1,0 +1,344 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { supabase } from '../lib/supabase';
+import {
+  FALLBACK_RATIOS,
+  scaleLoaf,
+  formatGrams,
+  formatLoaves,
+  type LoafRatios,
+} from '../lib/sourdough';
+
+const RECIPE_SLUG = 'sourdough-bread';
+
+// Baker's percentages are derived at BUILD time. This page is public and static —
+// it never touches Supabase at read time (CLAUDE.md → Critical rendering rule).
+const { data: lines } = await supabase
+  .from('recipe_ingredients')
+  .select('ingredient, quantity')
+  .eq('recipe_slug', RECIPE_SLUG);
+
+function gramsFor(name: string): number | null {
+  const line = (lines ?? []).find(l => l.ingredient === name);
+  const qty = line?.quantity != null ? Number(line.quantity) : NaN;
+  return Number.isFinite(qty) && qty > 0 ? qty : null;
+}
+
+const white     = gramsFor('flour');
+const wholemeal = gramsFor('whole wheat flour');
+const water     = gramsFor('water');
+const salt      = gramsFor('salt');
+const starter   = gramsFor('sourdough starter');
+
+// Fall back to the known-good numbers if a line is ever renamed or removed, so a
+// recipe edit can't break the page (Priority 1: recipe availability first).
+let ratios: LoafRatios = FALLBACK_RATIOS;
+if (white && wholemeal && water && salt && starter) {
+  const totalFlour = white + wholemeal;
+  ratios = {
+    standardFlourG: totalFlour,
+    standardWholemealShare: wholemeal / totalFlour,
+    hydration: water / totalFlour,
+    saltPct: salt / totalFlour,
+    starterPct: starter / totalFlour,
+  };
+}
+
+// Slider works in whole percent; the standard mark is the recipe's own split.
+const standardWholemealPct = Math.round(ratios.standardWholemealShare * 100);
+const standard = scaleLoaf(ratios, 1, standardWholemealPct / 100);
+
+const rows = [
+  { key: 'white',     label: 'White flour',       value: standard.whiteFlourG },
+  { key: 'wholemeal', label: 'Wholemeal flour',   value: standard.wholemealFlourG },
+  { key: 'water',     label: 'Water',             value: standard.waterG },
+  { key: 'salt',      label: 'Salt',              value: standard.saltG },
+  { key: 'starter',   label: 'Sourdough starter', value: standard.starterG },
+];
+---
+
+<Layout title="Sourdough calculator" activeNav="sourdough">
+
+  <script
+    id="sourdough-ratios"
+    type="application/json"
+    set:html={JSON.stringify(ratios)}
+  ></script>
+
+  <!-- Header -->
+  <header class="mb-6">
+    <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-primary mb-2">
+      Sourdough
+    </p>
+    <h1 class="font-serif text-4xl font-semibold text-on-surface mb-2 leading-[1.05] tracking-[-0.015em]">
+      Loaf calculator
+    </h1>
+    <p class="text-sm text-on-surface-muted leading-relaxed max-w-lg">
+      Scale our loaf up or down, and shift the balance between wholemeal and white.
+      Everything else holds the recipe's ratios &mdash;
+      <span class="font-serif italic">{Math.round(ratios.hydration * 100)}% hydration,
+      {formatGrams(ratios.saltPct * 100)}% salt,
+      {Math.round(ratios.starterPct * 100)}% starter</span>.
+    </p>
+  </header>
+
+  <div class="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
+
+    <!-- Controls -->
+    <section class="bg-surface border border-outline-soft rounded-2xl shadow-card p-5 md:p-6">
+
+      <!-- Batch size -->
+      <div class="mb-8">
+        <div class="flex items-baseline justify-between gap-3 mb-3">
+          <h2 class="font-serif text-xl font-semibold text-on-surface">How much?</h2>
+          <span id="total-flour-label" class="text-xs text-on-surface-muted tabular-nums">
+            {formatGrams(standard.totalFlourG)}&thinsp;g flour
+          </span>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <button
+            type="button"
+            id="loaves-down"
+            aria-label="Fewer loaves"
+            class="shrink-0 size-11 grid place-items-center rounded-full border border-outline-soft text-primary hover:bg-primary-container disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+
+          <output
+            id="loaves-value"
+            for="loaves-down loaves-up"
+            class="flex-1 text-center font-serif text-2xl font-semibold text-on-surface tabular-nums"
+          >
+            {formatLoaves(1)}
+          </output>
+
+          <button
+            type="button"
+            id="loaves-up"
+            aria-label="More loaves"
+            class="shrink-0 size-11 grid place-items-center rounded-full border border-outline-soft text-primary hover:bg-primary-container disabled:opacity-35 disabled:hover:bg-transparent transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Wholemeal balance -->
+      <div>
+        <div class="flex items-baseline justify-between gap-3 mb-1">
+          <h2 class="font-serif text-xl font-semibold text-on-surface">Wholemeal</h2>
+          <span id="wholemeal-label" class="text-xs text-on-surface-muted tabular-nums">
+            {standardWholemealPct}% of the flour
+          </span>
+        </div>
+
+        <p id="wholemeal-note" class="text-xs text-on-surface-muted mb-4 h-4">
+          <span class="font-serif italic">Standard loaf</span>
+        </p>
+
+        <input
+          type="range"
+          id="wholemeal"
+          class="hearth-range w-full"
+          min="0"
+          max="50"
+          step="1"
+          value={standardWholemealPct}
+          aria-label="Wholemeal share of total flour, percent"
+        />
+
+        <div class="flex justify-between text-[11px] text-on-surface-muted tabular-nums mt-2">
+          <span>0% &mdash; all white</span>
+          <span>50%</span>
+        </div>
+
+        <button
+          type="button"
+          id="reset-wholemeal"
+          class="hidden mt-4 text-xs font-semibold text-primary hover:underline"
+        >
+          Back to standard ({standardWholemealPct}%)
+        </button>
+      </div>
+    </section>
+
+    <!-- Quantities -->
+    <section class="bg-surface border border-outline-soft rounded-2xl shadow-card p-5 md:p-6">
+      <h2 class="font-serif text-xl font-semibold text-on-surface mb-4">Your loaf</h2>
+
+      <ul class="flex flex-col gap-2.5 mb-5">
+        {rows.map(row => (
+          <li class="flex items-baseline gap-3">
+            <span
+              data-qty={row.key}
+              class="text-primary font-semibold tabular-nums text-sm shrink-0 w-[72px] text-right"
+            >
+              {formatGrams(row.value)} g
+            </span>
+            <span class="text-on-surface text-sm">{row.label}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div class="border-t border-outline-soft pt-4 flex flex-col gap-1.5">
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-xs text-on-surface-muted">Dough weight</span>
+          <span id="dough-weight" class="text-xs font-semibold text-on-surface tabular-nums">
+            {formatGrams(standard.doughWeightG)}&thinsp;g
+          </span>
+        </div>
+        <div class="flex items-baseline justify-between gap-3">
+          <span class="text-xs text-on-surface-muted">True hydration</span>
+          <span id="true-hydration" class="text-xs font-semibold text-on-surface tabular-nums">
+            {(standard.trueHydration * 100).toFixed(1)}%
+          </span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- Note -->
+  <section class="mt-6">
+    <div class="bg-secondary-container rounded-2xl p-5">
+      <p class="font-serif italic text-sm text-on-secondary-container mb-2">Tip</p>
+      <p class="text-sm text-secondary leading-relaxed">
+        A 1:1:1 starter is about half flour and half water, so it brings its own water to
+        the party &mdash; that's why true hydration reads a little above the
+        {Math.round(ratios.hydration * 100)}% in the recipe. Wholemeal also drinks more than
+        white, so if you push it past about 25% expect a slacker dough.
+      </p>
+    </div>
+  </section>
+
+  <a
+    href={`/recipes/${RECIPE_SLUG}`}
+    class="inline-flex items-center gap-1.5 text-sm font-medium text-primary mt-6 hover:underline"
+  >
+    Full method
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <polyline points="9 18 15 12 9 6"/>
+    </svg>
+  </a>
+
+</Layout>
+
+<style>
+  .hearth-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--color-surface-high);
+    outline: none;
+  }
+
+  .hearth-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 1px 4px rgba(60, 40, 20, 0.35);
+    cursor: pointer;
+  }
+
+  .hearth-range::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: var(--color-primary);
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 1px 4px rgba(60, 40, 20, 0.35);
+    cursor: pointer;
+  }
+
+  .hearth-range:focus-visible::-webkit-slider-thumb {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+</style>
+
+<script>
+  import { scaleLoaf, formatGrams, formatLoaves, type LoafRatios } from '../lib/sourdough';
+
+  const configEl = document.getElementById('sourdough-ratios');
+  if (configEl?.textContent) {
+    const ratios: LoafRatios = JSON.parse(configEl.textContent);
+    const standardPct = Math.round(ratios.standardWholemealShare * 100);
+
+    const MIN_LOAVES = 0.5;
+    const MAX_LOAVES = 6;
+    const STEP = 0.5;
+
+    let loaves = 1;
+
+    const down        = document.getElementById('loaves-down') as HTMLButtonElement;
+    const up          = document.getElementById('loaves-up') as HTMLButtonElement;
+    const loavesValue = document.getElementById('loaves-value')!;
+    const totalFlour  = document.getElementById('total-flour-label')!;
+    const slider      = document.getElementById('wholemeal') as HTMLInputElement;
+    const wmLabel     = document.getElementById('wholemeal-label')!;
+    const wmNote      = document.getElementById('wholemeal-note')!;
+    const reset       = document.getElementById('reset-wholemeal') as HTMLButtonElement;
+    const doughWeight = document.getElementById('dough-weight')!;
+    const hydration   = document.getElementById('true-hydration')!;
+
+    function setAmount(key: string, grams: number) {
+      const el = document.querySelector(`[data-qty="${key}"]`);
+      if (el) el.textContent = `${formatGrams(grams)} g`;
+    }
+
+    function render() {
+      const pct = Number(slider.value);
+      const q = scaleLoaf(ratios, loaves, pct / 100);
+
+      setAmount('white', q.whiteFlourG);
+      setAmount('wholemeal', q.wholemealFlourG);
+      setAmount('water', q.waterG);
+      setAmount('salt', q.saltG);
+      setAmount('starter', q.starterG);
+
+      loavesValue.textContent = formatLoaves(loaves);
+      totalFlour.textContent = `${formatGrams(q.totalFlourG)} g flour`;
+      doughWeight.textContent = `${formatGrams(q.doughWeightG)} g`;
+      hydration.textContent = `${(q.trueHydration * 100).toFixed(1)}%`;
+
+      wmLabel.textContent = `${pct}% of the flour`;
+      const onStandard = pct === standardPct;
+      wmNote.innerHTML = onStandard
+        ? '<span class="font-serif italic">Standard loaf</span>'
+        : `<span class="tabular-nums">${formatGrams(q.wholemealFlourG)} g wholemeal, ${formatGrams(q.whiteFlourG)} g white</span>`;
+      reset.classList.toggle('hidden', onStandard);
+
+      down.disabled = loaves <= MIN_LOAVES;
+      up.disabled = loaves >= MAX_LOAVES;
+    }
+
+    down.addEventListener('click', () => {
+      loaves = Math.max(MIN_LOAVES, loaves - STEP);
+      render();
+    });
+
+    up.addEventListener('click', () => {
+      loaves = Math.min(MAX_LOAVES, loaves + STEP);
+      render();
+    });
+
+    slider.addEventListener('input', render);
+
+    reset.addEventListener('click', () => {
+      slider.value = String(standardPct);
+      render();
+    });
+
+    render();
+  }
+</script>

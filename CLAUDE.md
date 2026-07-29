@@ -356,6 +356,20 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 - Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only.
 
+#### Sourdough loaf calculator (`sourdough.astro`)
+
+**Public** (no auth) static page at `/sourdough`. Scales the `sourdough-bread` recipe by batch size and lets you shift the wholemeal/white flour balance.
+
+- **Ratios come from the DB at build time**, not read time — the frontmatter reads `recipe_ingredients` for `sourdough-bread`, derives baker's percentages against total flour, and bakes them into a `<script type="application/json">` block. Edit the recipe → webhook → rebuild → calculator follows. No request-time Supabase (see **Critical rendering rule**).
+- Ingredient lines are matched by **canonical name**: `flour` (white), `whole wheat flour`, `water`, `salt`, `sourdough starter`. If any is missing or renamed, the page silently falls back to `FALLBACK_RATIOS` in `sourdough.ts` so it can never break the build (Priority 1).
+- **Controls:** a ½-step loaf stepper (0.5–6, disabled at the bounds) and a 0–50% wholemeal slider. The wholemeal slider only re-splits total flour — hydration, salt and starter are untouched by it.
+- Maths lives in `src/lib/sourdough.ts` (`scaleLoaf`, `formatGrams`, `formatLoaves`), kept DOM-free. Grams round to 1 g; salt to 0.5 g.
+- **True hydration** counts the water inside a 1:1:1 starter (half flour, half water by weight), so it reads ~72.7% against the recipe's stated 70%.
+- Range inputs have no global styling — the `.hearth-range` thumb/track CSS is a scoped `<style>` block on the page.
+- Entry points: public nav item + a "Loaf calculator" pill on the `sourdough-bread` recipe page only (guarded by `slug === 'sourdough-bread'` in `[slug].astro`).
+
+> **Timers — investigated and ruled out (2026-07-29).** A "set 4 phone timers at 30/60/90/120 min" button is **not possible** from a website; don't re-investigate. The Notification Triggers API (`TimestampTrigger`) was [abandoned by Chrome](https://developer.chrome.com/docs/web-platform/notification-triggers) and never shipped. The `intent://…action=android.intent.action.SET_TIMER` route fails silently because Chrome only launches intents whose target activity declares `android.intent.category.BROWSABLE`, and the Clock app's `HandleApiCalls` activity declares only `DEFAULT`/`VOICE` — deliberately, so websites can't set system alarms. The only working alternatives are an in-page countdown (needs a service worker, since `new Notification()` throws on Android Chrome) or full Web Push with a server-side scheduler. Both were declined as not worth the complexity.
+
 #### Login (`login.astro`)
 
 - Centred `shadow-card` (max ~400 px): 48 px clay medallion, "Welcome back", italic subtitle, inset `bg-surface` fields, inset-shadow primary button, muted footnote about disabled sign-ups.
@@ -370,11 +384,12 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 ### Navigation
 
 - **Wordmark** — clay medallion + serif "Yumlog." with ochre full stop (`Layout.astro`).
-- **Guests (desktop + mobile):** Recipes + Log in.
-- **Logged in:** Recipes, Shopping, Create, **Settings** (last auth item, before Sign out on desktop) + Sign out.
+- **Guests (desktop + mobile):** Recipes, Sourdough + Log in.
+- **Logged in:** Recipes, Sourdough, Shopping, Create, **Settings** (last auth item, before Sign out on desktop) + Sign out.
 - **Desktop nav pills:** `text-[13px] font-semibold`; active `bg-primary-container text-on-primary-container`.
 - **Mobile:** fixed bottom nav — same items; Settings uses gear icon.
-- Pass `activeNav` prop to `Layout.astro` to highlight the current tab (`recipes` | `shopping` | `create` | `settings`).
+- Pass `activeNav` prop to `Layout.astro` to highlight the current tab (`recipes` | `sourdough` | `shopping` | `create` | `settings`).
+- The mobile bottom nav branches on `item.id` for its icon — **add an icon case when adding a public nav item**, or it renders label-only.
 
 ---
 
@@ -559,6 +574,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     login.astro          ← email + password login
     create.astro         ← create/edit recipe form (auth-gated)
     shopping.astro       ← shared shopping list (auth-gated)
+    sourdough.astro      ← public loaf calculator; ratios read at build time
     settings.astro       ← site status (auth-gated)
     /settings/
       ingredients.astro  ← canonical ingredient registry admin (auth-gated)
@@ -578,6 +594,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     ingredient-registry.ts     ← fetch/edit canonical ingredients, reference counts, rename/merge/delete
     ingredient-registry-ui.ts  ← registry table UI, edit/confirm dialogs, “used in” modal
     settings.ts                ← shopping list last-changed fetch; shared timestamp formatting
+    sourdough.ts               ← loaf scaling maths (baker's percentages); DOM-free
     units.ts                   ← shopping-list unit conversion
     recipe-editor.ts           ← load/save recipe, ingredients registry, category upsert, autocomplete
     recipe-form-ui.ts          ← create/edit form DOM wiring, new-ingredient prompt on submit
