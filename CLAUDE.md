@@ -484,7 +484,8 @@ Supabase pauses Free-plan projects that don't get **"a few user requests to the 
 - **`GET /api/keepalive`** — public, uncached, runs the identical code path. `200 {"ok":true,…}` means the keep-alive works end to end; `503` reports which check failed. Use it instead of hunting through Cloudflare logs.
 - **External monitor.** Point a free scheduler (cron-job.org, UptimeRobot) at `https://<site>/api/keepalive` every 15 min. This is the important half: it's independent of whether the Worker's cron fires, and it **emails on failure** — the gap that let the July breakage run for eight weeks. Nothing secret is exposed; the endpoint returns no keys.
 - **If a pause warning arrives anyway:** activity generated during the warning window prevents the pause. Hitting `/api/keepalive` a few times is enough.
-- **Not recommended:** Supabase Pro ($25/mo) removes pausing and adds daily backups, but that's a lot for a two-person cookbook when the cron covers it. Do note there is **no backup of recipe data outside Supabase** — worth a periodic manual export from the dashboard.
+- **Not recommended:** Supabase Pro ($25/mo) removes pausing and adds daily backups, but that's a lot for a two-person cookbook when the cron covers it.
+- **Backups.** The keep-alive lowers the odds of a pause; it doesn't insure against one. `node --env-file=.env scripts/export-data.mjs` dumps `recipes`, `ingredients` and `recipe_ingredients` to committed JSON in [`backups/`](backups/) — stable filenames and deterministic row order, so git history is the backup history. Re-run and commit after any batch of recipe work. Restore procedure in [`backups/README.md`](backups/README.md).
 
 ---
 
@@ -577,9 +578,11 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   /lib/
     recipe-normaliser.ts ← Workers AI prompt + response validation (normaliseRecipe)
     recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
+/backups/                ← committed JSON export of recipe data (see backups/README.md)
 /scripts/
   ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
   check-supabase-schema.mjs    ← verify expected columns and RPCs against live Supabase
+  export-data.mjs              ← dump recipes/ingredients/recipe_ingredients to backups/
 /public/                 ← static assets (favicon, etc.)
 /src/
   /pages/

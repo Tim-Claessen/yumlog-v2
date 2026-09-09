@@ -1,0 +1,9 @@
+{
+  "exported_at": "2026-09-09T14:26:44.392Z",
+  "source": "https://nrmimftrjulvsgonrlzg.supabase.co",
+  "row_counts": {
+    "recipes": 51,
+    "ingredients": 201,
+    "recipe_ingredients": 483
+  }
+}

@@ -1,0 +1,806 @@
+[
+  {
+    "name": "000 flour",
+    "category": "baking"
+  },
+  {
+    "name": "allspice",
+    "category": "spices"
+  },
+  {
+    "name": "almond",
+    "category": "baking"
+  },
+  {
+    "name": "apple cider vinegar",
+    "category": "other pantry"
+  },
+  {
+    "name": "avocado",
+    "category": "fresh produce"
+  },
+  {
+    "name": "baby spinach or trimmed regular spinach, (washed and dried)",
+    "category": "fresh produce"
+  },
+  {
+    "name": "baking powder",
+    "category": "baking"
+  },
+  {
+    "name": "baking soda",
+    "category": "baking"
+  },
+  {
+    "name": "banana",
+    "category": "fresh produce"
+  },
+  {
+    "name": "basil",
+    "category": "fresh produce"
+  },
+  {
+    "name": "basil pesto",
+    "category": "fridge"
+  },
+  {
+    "name": "bay leaf",
+    "category": "spices"
+  },
+  {
+    "name": "beef",
+    "category": "fridge"
+  },
+  {
+    "name": "beef mince",
+    "category": "fridge"
+  },
+  {
+    "name": "beef stock",
+    "category": "spices"
+  },
+  {
+    "name": "bengal curry paste",
+    "category": "international food"
+  },
+  {
+    "name": "bitters",
+    "category": "drinks"
+  },
+  {
+    "name": "black bean",
+    "category": "tinned"
+  },
+  {
+    "name": "black pepper",
+    "category": "spices"
+  },
+  {
+    "name": "black peppercorn",
+    "category": "spices"
+  },
+  {
+    "name": "bocconcini",
+    "category": "fridge"
+  },
+  {
+    "name": "broccoli",
+    "category": "fresh produce"
+  },
+  {
+    "name": "brown lentil",
+    "category": "tinned"
+  },
+  {
+    "name": "brown onion",
+    "category": "fresh produce"
+  },
+  {
+    "name": "brown rice",
+    "category": "other pantry"
+  },
+  {
+    "name": "brown sugar",
+    "category": "baking"
+  },
+  {
+    "name": "buckwheat",
+    "category": "baking"
+  },
+  {
+    "name": "butter",
+    "category": "fridge"
+  },
+  {
+    "name": "butter cake mix",
+    "category": "baking"
+  },
+  {
+    "name": "butternut pumpkin",
+    "category": "fresh produce"
+  },
+  {
+    "name": "canned tomato",
+    "category": "tinned"
+  },
+  {
+    "name": "cardamom pod",
+    "category": "spices"
+  },
+  {
+    "name": "carrot",
+    "category": "fresh produce"
+  },
+  {
+    "name": "cashew",
+    "category": "snacks"
+  },
+  {
+    "name": "caster sugar",
+    "category": "baking"
+  },
+  {
+    "name": "cauliflower",
+    "category": "fresh produce"
+  },
+  {
+    "name": "celery stick",
+    "category": "fresh produce"
+  },
+  {
+    "name": "cheese",
+    "category": "fridge"
+  },
+  {
+    "name": "chia seed",
+    "category": "breakfast"
+  },
+  {
+    "name": "chicken breast or tenders, (cut into 1-inch pieces)",
+    "category": "fridge"
+  },
+  {
+    "name": "chicken stock",
+    "category": "tinned"
+  },
+  {
+    "name": "chickpea",
+    "category": "tinned"
+  },
+  {
+    "name": "chilli flake",
+    "category": "spices"
+  },
+  {
+    "name": "chinese barbecue seasoning",
+    "category": "international food"
+  },
+  {
+    "name": "chinese cabbage",
+    "category": "fresh produce"
+  },
+  {
+    "name": "chipotle",
+    "category": "tinned"
+  },
+  {
+    "name": "chips",
+    "category": "snacks"
+  },
+  {
+    "name": "chocolate chip",
+    "category": "baking"
+  },
+  {
+    "name": "cinnamon",
+    "category": "spices"
+  },
+  {
+    "name": "cloves garlic, minced (about 1 tablespoon)",
+    "category": "spices"
+  },
+  {
+    "name": "cocoa powder",
+    "category": "baking"
+  },
+  {
+    "name": "coconut milk",
+    "category": "tinned"
+  },
+  {
+    "name": "coconut sugar",
+    "category": "baking"
+  },
+  {
+    "name": "coriander",
+    "category": "fresh produce"
+  },
+  {
+    "name": "corn kernel",
+    "category": "fresh produce"
+  },
+  {
+    "name": "cranberry",
+    "category": "baking"
+  },
+  {
+    "name": "cream",
+    "category": "fridge"
+  },
+  {
+    "name": "cream cheese",
+    "category": "fridge"
+  },
+  {
+    "name": "cumin",
+    "category": "spices"
+  },
+  {
+    "name": "currant",
+    "category": "baking"
+  },
+  {
+    "name": "curry leaf",
+    "category": "fresh produce"
+  },
+  {
+    "name": "curry powder",
+    "category": "spices"
+  },
+  {
+    "name": "date",
+    "category": "snacks"
+  },
+  {
+    "name": "desiccated coconut",
+    "category": "baking"
+  },
+  {
+    "name": "dijon mustard",
+    "category": "fridge"
+  },
+  {
+    "name": "dried fruit",
+    "category": "baking"
+  },
+  {
+    "name": "dukka",
+    "category": "international food"
+  },
+  {
+    "name": "egg",
+    "category": "fridge"
+  },
+  {
+    "name": "egg white",
+    "category": "fridge"
+  },
+  {
+    "name": "egg yolk",
+    "category": "fridge"
+  },
+  {
+    "name": "eggplant",
+    "category": "fresh produce"
+  },
+  {
+    "name": "epazote",
+    "category": "international food"
+  },
+  {
+    "name": "feta",
+    "category": "fridge"
+  },
+  {
+    "name": "fish sauce",
+    "category": "international food"
+  },
+  {
+    "name": "flaxseed meal",
+    "category": "breakfast"
+  },
+  {
+    "name": "flour",
+    "category": "baking"
+  },
+  {
+    "name": "four bean mix",
+    "category": "tinned"
+  },
+  {
+    "name": "french onion soup mix",
+    "category": "other pantry"
+  },
+  {
+    "name": "fried shallot",
+    "category": "international food"
+  },
+  {
+    "name": "frozen mixed berry",
+    "category": "freezer"
+  },
+  {
+    "name": "fruit",
+    "category": "fresh produce"
+  },
+  {
+    "name": "garam masala",
+    "category": "spices"
+  },
+  {
+    "name": "garlic clove",
+    "category": "fresh produce"
+  },
+  {
+    "name": "garlic powder",
+    "category": "spices"
+  },
+  {
+    "name": "ginger",
+    "category": "fresh produce"
+  },
+  {
+    "name": "greek yoghurt",
+    "category": "fridge"
+  },
+  {
+    "name": "green bean",
+    "category": "fresh produce"
+  },
+  {
+    "name": "green capsicum",
+    "category": "fresh produce"
+  },
+  {
+    "name": "green chilli",
+    "category": "fresh produce"
+  },
+  {
+    "name": "ground cardamom",
+    "category": "spices"
+  },
+  {
+    "name": "ground coriander",
+    "category": "spices"
+  },
+  {
+    "name": "ground cumin",
+    "category": "spices"
+  },
+  {
+    "name": "ground turmeric",
+    "category": "spices"
+  },
+  {
+    "name": "ham",
+    "category": "fridge"
+  },
+  {
+    "name": "honey",
+    "category": "baking"
+  },
+  {
+    "name": "ice",
+    "category": "freezer"
+  },
+  {
+    "name": "icing sugar",
+    "category": "baking"
+  },
+  {
+    "name": "indian chili powder or cayenne pepper (or to taste)",
+    "category": "spices"
+  },
+  {
+    "name": "instant dry yeast",
+    "category": "baking"
+  },
+  {
+    "name": "jalapeno",
+    "category": "fresh produce"
+  },
+  {
+    "name": "kalamata olive",
+    "category": "international food"
+  },
+  {
+    "name": "kale",
+    "category": "fresh produce"
+  },
+  {
+    "name": "kidney bean",
+    "category": "tinned"
+  },
+  {
+    "name": "kosher salt",
+    "category": "other pantry"
+  },
+  {
+    "name": "lard",
+    "category": "fridge"
+  },
+  {
+    "name": "large onion, finely chopped (about 1 cup)",
+    "category": "fresh produce"
+  },
+  {
+    "name": "lemon juice",
+    "category": "fresh produce"
+  },
+  {
+    "name": "lemon rind",
+    "category": "fresh produce"
+  },
+  {
+    "name": "lemonade",
+    "category": "drinks"
+  },
+  {
+    "name": "lentil",
+    "category": "tinned"
+  },
+  {
+    "name": "lime",
+    "category": "fresh produce"
+  },
+  {
+    "name": "lime juice",
+    "category": "fresh produce"
+  },
+  {
+    "name": "liquid from chickpea can",
+    "category": null
+  },
+  {
+    "name": "long red chilli",
+    "category": "fresh produce"
+  },
+  {
+    "name": "maldive fish",
+    "category": "international food"
+  },
+  {
+    "name": "maple syrup",
+    "category": "breakfast"
+  },
+  {
+    "name": "mars bar",
+    "category": "snacks"
+  },
+  {
+    "name": "mayonnaise",
+    "category": "fridge"
+  },
+  {
+    "name": "mexican oregano",
+    "category": "spices"
+  },
+  {
+    "name": "milk",
+    "category": "fridge"
+  },
+  {
+    "name": "milk chocolate",
+    "category": "baking"
+  },
+  {
+    "name": "minced fresh ginger",
+    "category": "fresh produce"
+  },
+  {
+    "name": "mozzarella cheese",
+    "category": "fridge"
+  },
+  {
+    "name": "muesli",
+    "category": "breakfast"
+  },
+  {
+    "name": "mushroom",
+    "category": "fresh produce"
+  },
+  {
+    "name": "neutral oil",
+    "category": "other pantry"
+  },
+  {
+    "name": "nutmeg",
+    "category": "spices"
+  },
+  {
+    "name": "oat",
+    "category": "breakfast"
+  },
+  {
+    "name": "olive oil",
+    "category": "other pantry"
+  },
+  {
+    "name": "onion",
+    "category": "fresh produce"
+  },
+  {
+    "name": "oregano",
+    "category": "spices"
+  },
+  {
+    "name": "paprika",
+    "category": "spices"
+  },
+  {
+    "name": "parmesan",
+    "category": "fridge"
+  },
+  {
+    "name": "parsley",
+    "category": "fresh produce"
+  },
+  {
+    "name": "pasta",
+    "category": "other pantry"
+  },
+  {
+    "name": "pea",
+    "category": "freezer"
+  },
+  {
+    "name": "peanut butter",
+    "category": "breakfast"
+  },
+  {
+    "name": "pepita",
+    "category": "baking"
+  },
+  {
+    "name": "pie apple",
+    "category": "tinned"
+  },
+  {
+    "name": "plain yogurt, (preferably thick greek-style yogurt)",
+    "category": "fridge"
+  },
+  {
+    "name": "plant-based mince",
+    "category": "freezer"
+  },
+  {
+    "name": "pork shoulder",
+    "category": "fridge"
+  },
+  {
+    "name": "potato",
+    "category": "fresh produce"
+  },
+  {
+    "name": "protein powder",
+    "category": "breakfast"
+  },
+  {
+    "name": "puff pastry",
+    "category": "freezer"
+  },
+  {
+    "name": "quinoa",
+    "category": "other pantry"
+  },
+  {
+    "name": "rampe",
+    "category": "international food"
+  },
+  {
+    "name": "red capsicum",
+    "category": "fresh produce"
+  },
+  {
+    "name": "red chilli",
+    "category": "fresh produce"
+  },
+  {
+    "name": "red lentil",
+    "category": "tinned"
+  },
+  {
+    "name": "red onion",
+    "category": "fresh produce"
+  },
+  {
+    "name": "red wine",
+    "category": "other pantry"
+  },
+  {
+    "name": "rendang curry paste",
+    "category": "international food"
+  },
+  {
+    "name": "rice bubbles",
+    "category": "breakfast"
+  },
+  {
+    "name": "rice malt syrup",
+    "category": "baking"
+  },
+  {
+    "name": "rice vinegar",
+    "category": "other pantry"
+  },
+  {
+    "name": "rocket",
+    "category": "fresh produce"
+  },
+  {
+    "name": "roma tomato",
+    "category": "fresh produce"
+  },
+  {
+    "name": "rosemary",
+    "category": "fresh produce"
+  },
+  {
+    "name": "salt",
+    "category": "spices"
+  },
+  {
+    "name": "salted butter",
+    "category": "fridge"
+  },
+  {
+    "name": "self raising flour",
+    "category": "baking"
+  },
+  {
+    "name": "serrano chile",
+    "category": "fresh produce"
+  },
+  {
+    "name": "sesame oil",
+    "category": "other pantry"
+  },
+  {
+    "name": "sesame seed",
+    "category": "international food"
+  },
+  {
+    "name": "shredded coconut",
+    "category": "baking"
+  },
+  {
+    "name": "simple syrup",
+    "category": "snacks"
+  },
+  {
+    "name": "slivered almond",
+    "category": "baking"
+  },
+  {
+    "name": "smoked paprika",
+    "category": "spices"
+  },
+  {
+    "name": "sour cream",
+    "category": "fridge"
+  },
+  {
+    "name": "sourdough discard",
+    "category": "fridge"
+  },
+  {
+    "name": "sourdough starter",
+    "category": "fridge"
+  },
+  {
+    "name": "soy sauce",
+    "category": "international food"
+  },
+  {
+    "name": "spinach",
+    "category": "fresh produce"
+  },
+  {
+    "name": "spring onion",
+    "category": "fresh produce"
+  },
+  {
+    "name": "sundried tomato",
+    "category": "tinned"
+  },
+  {
+    "name": "sunflower oil",
+    "category": "other pantry"
+  },
+  {
+    "name": "sunflower seed",
+    "category": "snacks"
+  },
+  {
+    "name": "sweet potato",
+    "category": "fresh produce"
+  },
+  {
+    "name": "thyme leaf",
+    "category": "fresh produce"
+  },
+  {
+    "name": "toasted coconut chip",
+    "category": "snacks"
+  },
+  {
+    "name": "tomatillo",
+    "category": "fresh produce"
+  },
+  {
+    "name": "tomato",
+    "category": "fresh produce"
+  },
+  {
+    "name": "tomato passata",
+    "category": "tinned"
+  },
+  {
+    "name": "tomato paste",
+    "category": "tinned"
+  },
+  {
+    "name": "turmeric",
+    "category": "spices"
+  },
+  {
+    "name": "unsalted butter",
+    "category": "fridge"
+  },
+  {
+    "name": "vanilla essence",
+    "category": "baking"
+  },
+  {
+    "name": "vegemite",
+    "category": "breakfast"
+  },
+  {
+    "name": "vegetable oil",
+    "category": "other pantry"
+  },
+  {
+    "name": "vegetable stock",
+    "category": "tinned"
+  },
+  {
+    "name": "vermicelli noodle",
+    "category": "international food"
+  },
+  {
+    "name": "water",
+    "category": null
+  },
+  {
+    "name": "whiskey",
+    "category": "drinks"
+  },
+  {
+    "name": "white onion",
+    "category": "fresh produce"
+  },
+  {
+    "name": "white rice",
+    "category": "other pantry"
+  },
+  {
+    "name": "white sugar",
+    "category": "baking"
+  },
+  {
+    "name": "white vinegar",
+    "category": "other pantry"
+  },
+  {
+    "name": "white wine vinegar",
+    "category": "other pantry"
+  },
+  {
+    "name": "whole wheat flour",
+    "category": "baking"
+  },
+  {
+    "name": "worcestershire",
+    "category": "other pantry"
+  }
+]
