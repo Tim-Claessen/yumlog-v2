@@ -13,9 +13,12 @@
   "ai": {
     "binding": "AI"
   },
-  // Daily keep-alive ping to Supabase (worker.ts "scheduled" handler) so the
-  // free-tier project isn't auto-paused for inactivity. 03:00 UTC ≈ 1pm AEST.
+  // Keep-alive pings to Supabase (worker.ts "scheduled" handler) so the
+  // free-tier project isn't auto-paused for inactivity. Every 6 hours, not
+  // daily: Supabase's bar is "a few user requests to the database each day
+  // over the previous week", and a single daily ping sat right on the edge
+  // of it (a pause warning still arrived on 2026-09-09).
   "triggers": {
-    "crons": ["0 3 * * *"]
+    "crons": ["0 */6 * * *"]
   }
 }

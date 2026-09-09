@@ -417,6 +417,8 @@ PUBLIC_SUPABASE_ANON_KEY=<JWT anon key — see .env, never commit>
 
 Set the same variables in the Cloudflare project → **Settings** → **Variables and Secrets** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
 
+> **Build variables ≠ runtime variables.** Workers Builds keeps these separate. `NODE_VERSION` and the Supabase vars used by `astro build` are **build** variables; but `worker.ts` and `functions/api/*` read `env.PUBLIC_SUPABASE_URL` / `env.PUBLIC_SUPABASE_ANON_KEY` at **runtime**, so both Supabase vars must also exist as runtime **Variables and Secrets**. Set only on the build side, the static site builds perfectly and the Worker's server-side code fails at runtime — `/api/import-recipe` returns 500 and the keep-alive cron dies silently. Verify with `GET /api/keepalive` (see **Supabase keep-alive** below).
+
 ---
 
 ## Deployment (Cloudflare Workers — NOT classic Pages)
@@ -472,6 +474,17 @@ Hook `recipes` only — not `recipe_ingredients`, `ingredients`, or `shopping_li
 Treat the deploy hook URL like a password. Test with `curl -X POST "<hook-url>"` or by saving a recipe and checking webhook logs (Supabase) and **Deployments** (Cloudflare).
 
 Git pushes to `main` also trigger builds; the webhook covers DB-only changes from the create/edit form.
+
+### Supabase keep-alive (free-tier auto-pause)
+
+Supabase pauses Free-plan projects that don't get **"a few user requests to the database each day over the previous week."** A paused project would **not** take the public site down — recipe pages are pre-rendered static HTML with no request-time DB access — but login, `/shopping`, `/create` and `/settings` would all break.
+
+- **Cron:** `wrangler.jsonc` → `triggers.crons` = `0 */6 * * *` (four times a day). The handler is `scheduled()` in `worker.ts`, which reads one row from `recipes` and one from `ingredients` via the REST API.
+- **Failures throw, they don't log.** A thrown error marks the invocation failed in Workers **Observability**; a `console.error` just scrolls past. The original daily ping (added 2026-07-12) failed unnoticed until a pause warning arrived **2026-09-09**.
+- **`GET /api/keepalive`** — public, uncached, runs the identical code path. `200 {"ok":true,…}` means the keep-alive works end to end; `503` reports which check failed. Use it instead of hunting through Cloudflare logs.
+- **External monitor.** Point a free scheduler (cron-job.org, UptimeRobot) at `https://<site>/api/keepalive` every 15 min. This is the important half: it's independent of whether the Worker's cron fires, and it **emails on failure** — the gap that let the July breakage run for eight weeks. Nothing secret is exposed; the endpoint returns no keys.
+- **If a pause warning arrives anyway:** activity generated during the warning window prevents the pause. Hitting `/api/keepalive` a few times is enough.
+- **Not recommended:** Supabase Pro ($25/mo) removes pausing and adds daily backups, but that's a lot for a two-person cookbook when the cron covers it. Do note there is **no backup of recipe data outside Supabase** — worth a periodic manual export from the dashboard.
 
 ---
 
@@ -553,7 +566,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   package.json
   tsconfig.json
   wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding
-  worker.ts               ← Worker entrypoint — manually dispatches /api/* routes, falls back to ASSETS (see Deployment)
+  worker.ts               ← Worker entrypoint — dispatches /api/* routes (import-recipe, keepalive), falls back to ASSETS; also holds the scheduled() Supabase keep-alive (see Deployment)
   .env                   ← Supabase URL + anon key (gitignored)
   .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
 /docs/
