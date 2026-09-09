@@ -485,13 +485,26 @@ Supabase pauses Free-plan projects that don't get **"a few user requests to the 
 - **External monitor.** Point a free scheduler (cron-job.org, UptimeRobot) at `https://<site>/api/keepalive` every 15 min. This is the important half: it's independent of whether the Worker's cron fires, and it **emails on failure** — the gap that let the July breakage run for eight weeks. Nothing secret is exposed; the endpoint returns no keys.
 - **If a pause warning arrives anyway:** activity generated during the warning window prevents the pause. Hitting `/api/keepalive` a few times is enough.
 - **Not recommended:** Supabase Pro ($25/mo) removes pausing and adds daily backups, but that's a lot for a two-person cookbook when the cron covers it.
-- **Backups.** The keep-alive lowers the odds of a pause; it doesn't insure against one. `node --env-file=.env scripts/export-data.mjs` dumps `recipes`, `ingredients` and `recipe_ingredients` to committed JSON in [`backups/`](backups/) — stable filenames and deterministic row order, so git history is the backup history. Re-run and commit after any batch of recipe work. Restore procedure in [`backups/README.md`](backups/README.md).
+
+### Data backups
+
+The keep-alive lowers the odds of a pause; it doesn't insure against one, and per the pause email a project left paused for 90 days can no longer be unpaused.
+
+```bash
+node --env-file=.env scripts/export-data.mjs
+```
+
+Dumps `recipes`, `ingredients` and `recipe_ingredients` to JSON in [`backups/`](backups/), committed to the repo. Stable filenames and deterministic row order mean a re-run produces a clean diff — **git history is the backup history**. Re-run and commit after any batch of recipe work.
+
+- `shopping_list` is **excluded** — authenticated-only, so the anon key can't read it, and transient enough that nothing is lost.
+- Nothing secret is committed; all three exported tables are public-SELECT.
+- Restore order matters (`ingredients` → `recipes` → `recipe_ingredients`) — procedure in [`backups/README.md`](backups/README.md). That SQL is written from the schema, **not rehearsed** against an empty project.
 
 ---
 
 ## Recipe import (server-side)
 
-**`functions/api/import-recipe.ts`** is the **only server-side code in the project.** Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
+**`functions/api/import-recipe.ts`** is the only server-side code in the project that does real work. (The other two server-side paths both live in `worker.ts` and exist purely to keep Supabase awake: the `scheduled()` cron and `GET /api/keepalive` — see **Supabase keep-alive** above.) Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
 
 It's a handler (`POST /api/import-recipe`) written in Pages-Function style (`onRequest({ request, env })`) but manually dispatched from `worker.ts` — see **Deployment (Cloudflare Workers, Git-connected)** above for why that dispatch step exists.
 
