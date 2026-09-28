@@ -53,12 +53,17 @@ revoke pg_net EXECUTE from API roles (005 — turned out impossible, see Done); 
   /sourdough, /login, /shopping, /api/keepalive). Logged-in flows (shopping, save → webhook rebuild,
   realtime, registry, import) are untested before cutover; the 5.10 smoke test is the first check.
 
-## Next
-- 4.8 create `yumlog-preview` Worker (build vars = wrapt URL + legacy anon JWT + NODE_VERSION=22;
-  runtime vars as **Secrets**), its deploy hook into Vault as `yumlog_deploy_hook`; then re-run
-  `rls_tests.sql` to see W1/W2 PASS. Open question Q2: whether Workers Builds accepts
-  `--env preview` naming; fallbacks in PLAN.
-- Stage 5 cutover (fresh export + load with a new run id) and Stage 6 decommission per PLAN §4.
+## Next (paused 2026-09-28 — resume here)
+Live state right now: old project still live and **not** frozen (prod site uses it); wrapt `yumlog`
+holds the rehearsal data (preview edits there are throwaway); Vault `yumlog_deploy_hook` = the
+**preview** hook; yumlog-preview Worker up. Nothing in production has changed.
+1. 4.12 open the PR `migrate/supabase-to-wrapt` → `main` (review done; do not merge) — ask Tim first.
+2. Stage 5 cutover per PLAN §4 / stage3 README (Tim needs ~45–75 min; tell Zoe). Before T0: Tim copies
+   the current prod `yumlog` build + runtime Supabase values to a password manager. Then 5.0 prod
+   deploy hook → 5.1 freeze → 5.2 export → Claude runs `loadgen.py load <csv> --target wrapt` (new
+   run id) → 5.4 chunks + swap (paste unchanged) → 5.5 checksums both sides → 5.6 Vault → prod hook →
+   5.7/5.8 CF vars → 5.9 merge → 5.10 smoke test (the first logged-in test — 4.9 was skipped).
+3. Stage 6 decommission after the 2-day soak.
 
 ## Known small issues (accepted, not fixed)
 UI shows edit controls to any signed-in wrapt user (DB refuses writes); login page copy says
