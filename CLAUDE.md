@@ -1,6 +1,6 @@
 # Yumlog — Project Context
 
-A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of them can log in and edit.
+A personal cookbook for two users (Tim + Zoe). Public read-only; only members of the allowlist (`yumlog.members`) can edit. Today that's Tim only — Zoe has no account yet (see **Adding Zoe**).
 
 ---
 
@@ -10,8 +10,8 @@ A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of
 | --------- | ------------------------------------------------------------------- |
 | Frontend  | Astro 6, deployed to **Cloudflare Workers** (static assets + a thin routing worker — see **Deployment**) |
 | Styling   | Tailwind CSS 4 (via `@tailwindcss/vite`, not `@astrojs/tailwind`)   |
-| Backend   | Supabase (Postgres + Auth)                                          |
-| DB client | `@supabase/supabase-js` 2                                           |
+| Backend   | Supabase (Postgres + Auth) — the **`yumlog` schema inside wrapt's Supabase project** (see **Supabase project**) |
+| DB client | `@supabase/supabase-js` 2, created with `db: { schema: 'yumlog' }`  |
 | Fonts     | `@fontsource-variable/newsreader`, `@fontsource-variable/hanken-grotesk` |
 | Other     | `pluralize` — ingredient normalisation and display pluralisation    |
 
@@ -23,24 +23,42 @@ A personal cookbook for two users (Tim + Zoe). Public read-only; only the two of
 
 1. **At build time** — to fetch recipe data for static generation.
 2. **Client-side for auth** — login session check and nav gating (authenticated only).
-3. **Client-side for writes** — adding/editing recipes (authenticated only).
-4. **Client-side for the shopping list** — read and write (authenticated only).
-5. **Client-side for settings** — site status and ingredient registry (authenticated only); no build-time DB reads for user-specific data.
+3. **Client-side for writes** — adding/editing recipes (members only).
+4. **Client-side for the shopping list** — read and write (members only).
+5. **Client-side for settings** — site status and ingredient registry (members only); no build-time DB reads for user-specific data.
 
 If a feature would make recipe pages depend on Supabase at request time, reject that approach.
 
 **After creating a new recipe**, the row exists in Supabase immediately but the static page won't appear until the next `npm run build` / deploy. Edits to existing recipes update the DB immediately; the static HTML updates on the next build too.
+
+**Build guard.** `index.astro` and `recipes/[slug].astro` call `failBuild()` (`src/lib/build-guard.ts`) if a build-time recipe query errors or the recipe list comes back empty. The build fails, Workers Builds skips the deploy, and the last good site stays live — instead of an empty site deploying "successfully" because a variable, the exposed-schema list or a grant was wrong. `/sourdough` keeps its own `FALLBACK_RATIOS` instead.
 
 ---
 
 ## Authentication
 
 - **Login:** `/login` — email + password via `signInWithPassword`. Redirects to `?redirect=` on success (defaults to `/`).
+- **Accounts are wrapt's.** Yumlog shares wrapt's Supabase project, so a yumlog login *is* a wrapt Auth user (Tim's is his wrapt login). Wrapt has **public sign-ups on**: anyone can create an account, so **"authenticated" does not mean Tim or Zoe**. What makes someone an editor is a row in `yumlog.members` (see **Row-level security**).
 - **Session:** client-side only — Supabase persisted session in the browser. No SSR.
 - **Guests see:** Recipes nav + Log in. Recipe pages are fully public.
-- **Logged-in users see:** Recipes, Shopping, Create, Settings, Sign out; edit controls on recipe pages.
+- **Logged-in users see:** Recipes, Shopping, Create, Settings, Sign out; edit controls on recipe pages. The UI gates on "has a session", not membership — a signed-in non-member sees the controls, but the database refuses every write and returns an empty shopping list. The database is the security boundary; the UI isn't.
 - **Protected pages:** `/shopping`, `/create`, `/settings`, `/settings/ingredients` — client-side `requireAuth()` redirects to login if no session.
-- Public sign-ups are **disabled** in Supabase Auth. Only manually-added accounts (Tim + Zoe) can log in.
+
+### Adding Zoe
+
+Zoe has no account in wrapt's project yet. To add her:
+
+1. Supabase (wrapt) → **Authentication → Users → Add user → Create new user**: her email and a password, *Auto Confirm User* ticked.
+2. SQL editor (wrapt):
+   ```sql
+   insert into yumlog.members (user_id, note)
+   select id, 'Zoe' from auth.users where email = 'fisherzoe98@gmail.com'
+   on conflict do nothing;
+   ```
+   It should report 1 row inserted.
+3. She logs in at yumlog `/login`. To remove her: `delete from yumlog.members where note = 'Zoe';` (her auth user can stay).
+
+Side effect to tell her: she'd also be able to sign in on wrapt's login page, but gets nowhere there without a Spotify-allowlisted connection.
 
 ### Astro client-script gotcha
 
@@ -50,91 +68,100 @@ If a feature would make recipe pages depend on Supabase at request time, reject 
 
 ## Database schema
 
+All of yumlog's tables live in the **`yumlog` schema** of wrapt's Supabase project — never in `public`, which is wrapt's. The client reaches them because `src/lib/supabase.ts` is created with `db: { schema: YUMLOG_DB_SCHEMA }` (hard-coded `'yumlog'` in `src/lib/db-schema.ts`), and because `yumlog` is listed in Supabase → **Data API → Exposed schemas** (with `public` kept first, so wrapt's default is unchanged). Raw REST calls (`worker.ts`, `functions/`) send `Accept-Profile: yumlog` / `Content-Profile: yumlog` themselves.
+
+The SQL that builds it is **`supabase/migrations/`** — numbered, idempotent, each ending in a verification query:
+
+| File | What |
+|---|---|
+| `001_yumlog_schema.sql` | schema, the four tables, FK indexes, `members`, the `shopping_list.updated_at` trigger |
+| `002_yumlog_security.sql` | grants, `is_member()`, RLS policies, the two RPCs |
+| `003_yumlog_rebuild_webhook.sql` | the recipes → Cloudflare rebuild trigger (Vault + pg_net) |
+| `004_yumlog_realtime.sql` | adds `shopping_list` to the `supabase_realtime` publication |
+| `005_optional_revoke_net_http.sql` | optional pg_net hardening — only if 003's report says so |
+
+Run them in order in wrapt's SQL editor. Column order and definitions match the original project exactly.
+
 ```sql
+-- Canonical ingredient registry (one row per normalised name)
+create table yumlog.ingredients (
+  name      text primary key,     -- normalised name, e.g. 'brown onion'
+  category  text                  -- shopping-list aisle; null = valid in recipes but not shopped
+);
+
 -- Recipes — keyed by a readable slug (e.g. 'garlic-butter-mushrooms')
-create table recipes (
+create table yumlog.recipes (
   slug           text primary key,
   title          text not null,
   category       text,            -- slug-style, e.g. 'sweet_treat'; single value
   protein        text,            -- slug-style; may be comma-separated for multiple, e.g. 'chickpea, lentils'
   cook_time_min  integer,
   method         text not null,   -- step-by-step instructions, one step per line (see Stored text formats)
-  tips           text,            -- one tip per line; null when absent
-  substitutions  text,            -- one substitution per line; null when absent
   source_url     text,
   created_at     timestamptz default now(),
+  tips           text,            -- one tip per line; null when absent
+  substitutions  text,            -- one substitution per line; null when absent
   updated_at     timestamptz not null default now()  -- bumped to trigger rebuilds (see Deployment)
 );
 
--- Canonical ingredient registry (one row per normalised name)
-create table ingredients (
-  name      text primary key,     -- normalised name, e.g. 'brown onion'
-  category  text                  -- shopping-list aisle; null = valid in recipes but not shopped
-);
-
 -- Per-recipe ingredient lines (FK → ingredients.name)
-create table recipe_ingredients (
+create table yumlog.recipe_ingredients (
   id            bigint generated always as identity primary key,
-  recipe_slug   text not null references recipes(slug) on delete cascade,
-  ingredient    text not null references ingredients(name) on update cascade on delete restrict,
+  recipe_slug   text not null references yumlog.recipes(slug) on delete cascade,
+  ingredient    text not null references yumlog.ingredients(name) on update cascade on delete restrict,
   display_name  text,               -- original wording, e.g. 'button mushrooms'
   quantity      numeric,
   unit          text                -- 'g','kg','ml','cup','each','pinch'...
 );
 
--- The single shared shopping list (both users share one list)
-create table shopping_list (
+-- The single shared shopping list (all members share one list)
+create table yumlog.shopping_list (
   id          bigint generated always as identity primary key,
-  ingredient  text not null references ingredients(name) on update cascade on delete restrict,
+  ingredient  text not null references yumlog.ingredients(name) on update cascade on delete restrict,
   quantity    numeric,
   unit        text,                 -- canonical unit after conversion, e.g. 'g' or 'each'
   checked     boolean not null default false,
   position    integer,              -- global order; grouped display derives from category + position
   added_at    timestamptz default now(),
-  updated_at  timestamptz not null default now()
+  updated_at  timestamptz not null default now()   -- set by a BEFORE UPDATE trigger
+);
+
+-- Who may edit: the allowlist. RLS on, no policies, no grants — only postgres
+-- (the SQL editor) can read or change it.
+create table yumlog.members (
+  user_id   uuid primary key references auth.users(id) on delete cascade,
+  note      text,                   -- e.g. 'Tim'
+  added_at  timestamptz not null default now()
 );
 ```
 
 `ingredients.category` is constrained in Postgres to one of eleven fixed aisle values (see **Ingredient shopping sections** below), or `null`.
 
-> **Pending migrations** — run once in the Supabase SQL editor as needed:
->
-> `tips` / `substitutions` on recipes (if missing):
-> ```sql
-> alter table recipes add column if not exists tips          text;
-> alter table recipes add column if not exists substitutions text;
-> ```
-> `shopping_list.updated_at` + auto-touch on row update:
-> ```sql
-> alter table shopping_list
->   add column if not exists updated_at timestamptz not null default now();
->
-> update shopping_list
-> set updated_at = coalesce(added_at, now())
-> where updated_at is null or updated_at = now();
->
-> create or replace function shopping_list_set_updated_at()
-> returns trigger language plpgsql as $$
-> begin
->   new.updated_at := now();
->   return new;
-> end;
-> $$;
->
-> drop trigger if exists shopping_list_set_updated_at on shopping_list;
-> create trigger shopping_list_set_updated_at
->   before update on shopping_list
->   for each row execute function shopping_list_set_updated_at();
-> ```
->
-> Ingredient registry admin (merge RPC + rebuild touch) — **`scripts/ingredient-registry-rpc.sql`**:
-> adds `recipes.updated_at` (if missing), `touch_recipes_for_ingredient()`, and `merge_ingredients()`. Required for merge and auto-rebuild after canonical renames.
+Indexes on the three FK columns (`recipe_ingredients.recipe_slug`, `recipe_ingredients.ingredient`, `shopping_list.ingredient`) back the cascades and per-recipe reads.
+
+**Functions** (all `set search_path = ''`, every name schema-qualified):
+
+- `yumlog.is_member()` — `true` if `auth.uid()` is in `members`. SECURITY DEFINER (so it can read `members`), read-only, about the caller only.
+- `yumlog.touch_recipes_for_ingredient(text)` and `yumlog.merge_ingredients(text, text)` — the registry RPCs (called by name from `src/lib/ingredient-registry.ts`; `db.schema` routes them). **SECURITY INVOKER** with a member guard (`not a yumlog member`, SQLSTATE 42501). They were DEFINER in the old project; members already pass RLS on everything they touch, so definer rights bought nothing but risk.
+- `yumlog.shopping_list_set_updated_at()` and `yumlog.request_site_rebuild()` — trigger-only; nobody has EXECUTE.
 
 ### Row-level security
 
-- `recipes` and `recipe_ingredients` — public **SELECT**; authenticated-only **INSERT/UPDATE/DELETE**.
-- `ingredients` — public **SELECT** (needed at build time for joins and client autocomplete); authenticated-only writes.
-- `shopping_list` — authenticated-only for everything (no public access).
+The model: **anon reads public data; members do everything; nobody else gets anything.** Grants are explicit (the `yumlog` schema has no default ACLs, so nothing is granted by accident) and RLS decides rows.
+
+| Object | anon | authenticated | service_role |
+|---|---|---|---|
+| schema `yumlog` | USAGE | USAGE | **none** |
+| `recipes`, `ingredients`, `recipe_ingredients` | SELECT | SELECT, INSERT, UPDATE, DELETE | none |
+| `shopping_list` | none | SELECT, INSERT, UPDATE, DELETE | none |
+| `members` | none | none | none |
+| `is_member()`, the two RPCs | none | EXECUTE | none |
+
+- **Policies** — `recipes`, `ingredients`, `recipe_ingredients`: one public SELECT policy (`anon, authenticated`, `using (true)`) plus per-command INSERT/UPDATE/DELETE policies for `authenticated` gated on `(select yumlog.is_member())`. `shopping_list`: one `FOR ALL` policy, members only. `members`: RLS on, no policies.
+- **Authenticated ≠ Tim/Zoe.** Wrapt has public sign-ups, so every write policy and both RPCs check the allowlist. A signed-up stranger can read the public tables, sees **0** shopping-list rows, and gets RLS errors on writes and "not a yumlog member" from the RPCs.
+- **service_role has no grants — not even schema USAGE.** Wrapt's `/ask` feature runs model-generated SQL as service_role; BYPASSRLS skips policies, not privileges, so it gets *permission denied for schema yumlog*. Don't "fix" that by following Supabase's docs recipe of granting service_role — it's deliberate.
+- **Anon can run SQL through wrapt's `public.run_ask_sql`** (EXECUTE is granted to PUBLIC on the wrapt side — a pre-existing wrapt issue). It's read-only, but it can read anything anon can, including the catalogues: `pg_get_functiondef`, `pg_get_triggerdef`. So **no secrets in any function or trigger source** — hence the Vault-based webhook (see **Deployment**).
+- Proven by `migration/stage3/rls_tests.sql` (anon, a fabricated stranger, service_role, Tim), which rolls itself back.
 
 ### Key design decisions
 
@@ -142,7 +169,8 @@ create table shopping_list (
 - **Canonical ingredients** live in `ingredients` (one row per normalised name). `recipe_ingredients.ingredient` and `shopping_list.ingredient` are FKs to `ingredients.name` (`on update cascade`, `on delete restrict` — cannot delete a canonical name still referenced by a recipe or shopping row).
 - **`ingredients` has no unit column** — units live on `recipe_ingredients` and `shopping_list`; conversion happens in app code at shopping-list roll-up time (`src/lib/units.ts`), not on the registry row.
 - On recipe save or manual shopping-list add, **upsert** new names into `ingredients` before inserting child rows. Brand-new names require a shopping **category** (modal prompt); existing names keep their stored category silently.
-- Public sign-ups are **disabled** in Supabase Auth. Only manually-added accounts (Tim + Zoe) can log in.
+- **Editing rights come from `yumlog.members`**, not from Supabase Auth settings — wrapt's project has public sign-ups on (see **Authentication**).
+- **The schema name is hard-coded** (`src/lib/db-schema.ts`), not an env var: it's part of the data model, and another build-vs-runtime variable is exactly the mismatch **Environment variables** warns about. `scripts/*.mjs` repeat the value (Node can't import the `.ts` file).
 
 ---
 
@@ -204,12 +232,12 @@ Auth-gated dedicated screen (not embedded in `/settings`). Edits **`ingredients`
 
 - **List** — fixed-column table: bold canonical name, shopping section (or “Not shopped”), recipe count, **View recipes** link (read-only modal with title links), **Edit** button per row.
 - **Edit dialog** — change `name` and/or `category`; explicit confirm flows for rename, merge, and delete.
-- **Rename** — single `UPDATE ingredients SET name = …`; FK `on update cascade` repoints `recipe_ingredients` and `shopping_list`. Confirm shows affected recipe count. Calls `touch_recipes_for_ingredient()` RPC so the `recipes` webhook fires a rebuild.
+- **Rename** — single `UPDATE ingredients SET name = …`; FK `on update cascade` repoints `recipe_ingredients` and `shopping_list`. Confirm shows affected recipe count. Calls `touch_recipes_for_ingredient()` RPC so the `recipes` rebuild trigger fires.
 - **Merge** (rename collides with existing name) — `merge_ingredients()` RPC: reassigns all references to survivor, merges shopping rows by unit, deletes duplicate; confirm required.
 - **Delete** — only when zero recipe lines **and** zero shopping rows; DB `on delete restrict` as backstop.
 - **Category-only edit** — no site rebuild (shopping list reads category client-side; static recipe pages use `display_name`).
 
-Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: `scripts/ingredient-registry-rpc.sql`.
+Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the RPCs in `supabase/migrations/002_yumlog_security.sql` (members only).
 
 ### Display pluralisation (recipe detail only)
 
@@ -263,7 +291,7 @@ Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-
 - **Reorder** — pointer-based drag on grip only (`shopping-list-drag.ts`): fixed-position lift + shadow, dashed placeholder, FLIP animation on siblings, gentle settle on drop. **Grouped mode:** drag within one section only. **Flat mode:** drag across the single list. Persists global `position` via `setItemOrder()`.
 - **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear done, clear all (with confirmation dialog).
 
-> Enable **Realtime** for `shopping_list` in Supabase → Database → Replication if cross-device live sync is needed.
+> **Realtime is on** for `yumlog.shopping_list` (`supabase/migrations/004_yumlog_realtime.sql` adds it to the `supabase_realtime` publication; it was never enabled in the old project, so live sync is new). Realtime checks RLS per subscriber, so only members receive row events.
 
 ---
 
@@ -372,7 +400,7 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### Login (`login.astro`)
 
-- Centred `shadow-card` (max ~400 px): 48 px clay medallion, "Welcome back", italic subtitle, inset `bg-surface` fields, inset-shadow primary button, muted footnote about disabled sign-ups.
+- Centred `shadow-card` (max ~400 px): 48 px clay medallion, "Welcome back", italic subtitle, inset `bg-surface` fields, inset-shadow primary button, muted footnote saying sign-ups are disabled (true of yumlog — it has no sign-up page — though wrapt's Auth itself allows them; see **Authentication**).
 
 #### Settings (`settings.astro`, `settings/ingredients.astro`)
 
@@ -403,21 +431,32 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 
 ## Supabase project
 
-- **URL:** `https://nrmimftrjulvsgonrlzg.supabase.co`
-- **Anon key format:** JWT (the long `eyJ…` key), not the newer `sb_publishable_` format — both work but JWT is used here for compatibility.
+Yumlog has **no Supabase project of its own**. It lives in **wrapt's** project (Tim's Spotify-stats app), in the `yumlog` schema — see **Database schema**.
+
+- **URL:** `https://<wrapt-ref>.supabase.co` — wrapt's project URL; the current value is in the Cloudflare variables (and wrapt's own config). *TODO: fill in the ref here once the migration is live.*
+- **Anon key format:** wrapt's legacy JWT anon key (the long `eyJ…` key), not the newer `sb_publishable_` format — both work but JWT is used here for compatibility.
 - The anon key is safe to expose publicly and is stored in `.env` as `PUBLIC_SUPABASE_ANON_KEY`.
-- The **service-role key** is never committed.
+- The **service-role key** is never committed, and yumlog never uses it.
+- **Wrapt-side settings yumlog depends on:** `yumlog` in **Data API → Exposed schemas** (after `public`); the **pg_net** extension (rebuild webhook); the Vault secret `yumlog_deploy_hook`; `yumlog.shopping_list` in the `supabase_realtime` publication (004).
+- **Shared fate.** Wrapt's database is on the Free plan's 500 MB cap and wrapt's `plays` table grows every sync. If the cap is hit the whole database goes read-only — yumlog edits and the shopping list break too (recipe pages don't: they're static). Yumlog itself adds well under 2 MB. Check **Usage** now and then.
+- **Don't** point anything in wrapt (e.g. its `/ask` SQL) at the `yumlog` schema, and don't grant `service_role` on it.
+
+### Migration history
+
+Until the 2026-09/10 migration, yumlog had its own Supabase project (ref `nrmimftrjulvsgonrlzg`, tables in `public`, a Database Webhook with the deploy-hook URL in the trigger). The move is planned in `migration/stage2/PLAN.md`; the working SQL is in `migration/stage3/` (its README gives the run order). After cutover the old project stays **frozen** (read-only, `migration/stage3/freeze_old.sql`) for a 2-day soak, then is **paused** — restorable for 90 days, then gone. *Update this note with the actual cutover and pause dates.*
 
 ## Environment variables
 
 ```
-PUBLIC_SUPABASE_URL=https://nrmimftrjulvsgonrlzg.supabase.co
-PUBLIC_SUPABASE_ANON_KEY=<JWT anon key — see .env, never commit>
+PUBLIC_SUPABASE_URL=https://<wrapt-ref>.supabase.co
+PUBLIC_SUPABASE_ANON_KEY=<wrapt's JWT anon key — see .env, never commit>
 ```
 
 Set the same variables in the Cloudflare project → **Settings** → **Variables and Secrets** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
 
 > **Build variables ≠ runtime variables.** Workers Builds keeps these separate. `NODE_VERSION` and the Supabase vars used by `astro build` are **build** variables; but `worker.ts` and `functions/api/*` read `env.PUBLIC_SUPABASE_URL` / `env.PUBLIC_SUPABASE_ANON_KEY` at **runtime**, so both Supabase vars must also exist as runtime **Variables and Secrets**. Set only on the build side, the static site builds perfectly and the Worker's server-side code fails at runtime — `/api/import-recipe` returns 500 and the keep-alive cron dies silently. Verify with `GET /api/keepalive` (see **Supabase keep-alive** below).
+
+> **Keep the runtime vars' type as it is.** `wrangler.jsonc` declares no `vars` and no `keep_vars` at the top level. `wrangler deploy` replaces dashboard **Text** variables with the config's `vars` unless `keep_vars` is set, but never touches **Secrets** — so if the vars ever vanish after a deploy (`/api/keepalive` → 503 "Missing Supabase runtime env vars"), re-add them as type **Secret**.
 
 ---
 
@@ -456,35 +495,37 @@ npx wrangler dev                # runs worker.ts + the static build locally at h
 
 Recipes are pre-rendered at build time (see **Critical rendering rule**). After create/edit in the app, the DB updates immediately; static HTML updates when Cloudflare finishes the next deploy (~2–3 min).
 
-**Cloudflare deploy hook** — project → **Settings** → **Builds** → **Deploy hooks** (or equivalent — Cloudflare has moved this around; look under Build/Deployments settings). Create a hook on the production branch (`main`). Copy the secret POST URL.
+How it works (`supabase/migrations/003_yumlog_rebuild_webhook.sql`):
 
-**Supabase database webhook** — **Database** → **Webhooks** → create webhook:
+- A **statement-level** trigger `yumlog_rebuild_site` (AFTER INSERT/UPDATE/DELETE on `yumlog.recipes`) calls `yumlog.request_site_rebuild()`, which POSTs to the Cloudflare deploy hook with **pg_net**. Statement-level: a merge that touches 10 recipes sends one POST, not 10.
+- The hook URL is a **Vault secret** named `yumlog_deploy_hook` (wrapt dashboard → **Integrations → Vault**). It never appears in SQL — function and trigger source is readable through wrapt's `run_ask_sql` (see **Row-level security**), and the SQL editor keeps history. Create and edit it in the Vault UI only.
+- **A rebuild problem never breaks a save.** No pg_net, no Vault secret, or a non-member API caller → the function does nothing; any other failure is a `WARNING` and the recipe write still commits. So "webhook off" (data loads, preview set-up, rollback) is simply "no secret".
+- **Only members trigger rebuilds.** A statement trigger fires even when RLS filters an UPDATE down to 0 rows, so the function checks `is_member()` for API callers. SQL-editor / dashboard edits (no JWT claims) always rebuild.
+- pg_net sends **after commit**: a rolled-back transaction (dry run, RLS tests) sends nothing. Responses sit in `net._http_response` for ~6 h if you need to debug one.
 
-| Field | Value |
-| ----- | ----- |
-| Table | `recipes` |
-| Events | INSERT, UPDATE, DELETE |
-| Method | POST |
-| URL | Cloudflare deploy hook URL |
+**Cloudflare deploy hook** — Worker → **Settings** → **Build** → **Deploy hooks** (Cloudflare moves this around; look under Build/Deployments settings). Create a hook on the production branch (`main`), copy the URL into the Vault secret. Treat it like a password. To rotate: create a new hook, edit the Vault secret, delete the old hook.
 
 Hook `recipes` only — not `recipe_ingredients`, `ingredients`, or `shopping_list`. Every recipe save touches `recipes` first; ingredients are written milliseconds later, well before the queued build fetches data. Shopping list is client-side only and does not need rebuilds.
 
-**Ingredient registry rebuilds** — category-only edits do **not** trigger a rebuild. **Rename** and **merge** call `touch_recipes_for_ingredient()` (in `scripts/ingredient-registry-rpc.sql`) to bump `recipes.updated_at` on affected slugs, firing the same webhook. Without that RPC, renames still cascade in the DB but static pages won't redeploy until the next git push.
+**Ingredient registry rebuilds** — category-only edits do **not** trigger a rebuild. **Rename** and **merge** call `yumlog.touch_recipes_for_ingredient()` to bump `recipes.updated_at` on affected slugs, firing the same trigger (once per call).
 
-Treat the deploy hook URL like a password. Test with `curl -X POST "<hook-url>"` or by saving a recipe and checking webhook logs (Supabase) and **Deployments** (Cloudflare).
+Test by saving a recipe and watching **Deployments** (Cloudflare); `select * from net._http_response order by created desc limit 5;` in wrapt's SQL editor shows what Cloudflare answered.
 
-Git pushes to `main` also trigger builds; the webhook covers DB-only changes from the create/edit form.
+Git pushes to `main` also trigger builds; the trigger covers DB-only changes from the create/edit form.
+
+### Preview Worker (migration only)
+
+While migrating, a second Worker **`yumlog-preview`** builds the `migrate/supabase-to-wrapt` branch with `npx wrangler deploy --env preview` (the `env.preview` block in `wrangler.jsonc`: re-declared `ai` + `assets`, no cron). It has its own build variables and its own deploy hook; during testing the Vault secret points at **that** hook, so preview edits rebuild the preview, never production. Its runtime `PUBLIC_SUPABASE_*` vars are set in its dashboard as **Secrets** (not in `wrangler.jsonc`). Delete the Worker, its hook and the `env.preview` block after cutover (PLAN step 6.3).
 
 ### Supabase keep-alive (free-tier auto-pause)
 
-Supabase pauses Free-plan projects that don't get **"a few user requests to the database each day over the previous week."** A paused project would **not** take the public site down — recipe pages are pre-rendered static HTML with no request-time DB access — but login, `/shopping`, `/create` and `/settings` would all break.
+Supabase pauses Free-plan projects that don't get **"a few user requests to the database each day over the previous week."** Wrapt's project is kept busy by wrapt's own 2-hourly sync, so pausing is now unlikely — but a paused project would still **not** take the public site down (recipe pages are static), while login, `/shopping`, `/create` and `/settings` would all break. The keep-alive stays as belt-and-braces and, more usefully, as the **health check for yumlog's grants and Data API exposure**.
 
-- **Cron:** `wrangler.jsonc` → `triggers.crons` = `0 */6 * * *` (four times a day). The handler is `scheduled()` in `worker.ts`, which reads one row from `recipes` and one from `ingredients` via the REST API.
+- **Cron:** `wrangler.jsonc` → `triggers.crons` = `0 */6 * * *` (four times a day). The handler is `scheduled()` in `worker.ts`, which reads one row from `yumlog.recipes` and one from `yumlog.ingredients` via the REST API (`Accept-Profile: yumlog`).
 - **Failures throw, they don't log.** A thrown error marks the invocation failed in Workers **Observability**; a `console.error` just scrolls past. The original daily ping (added 2026-07-12) failed unnoticed until a pause warning arrived **2026-09-09**.
-- **`GET /api/keepalive`** — public, uncached, runs the identical code path. `200 {"ok":true,…}` means the keep-alive works end to end; `503` reports which check failed. Use it instead of hunting through Cloudflare logs.
+- **`GET /api/keepalive`** — public, uncached, runs the identical code path. `200 {"ok":true,…}` means the keep-alive works end to end; `503` reports which check failed (a 404/406 there usually means `yumlog` isn't in the exposed schemas). Use it instead of hunting through Cloudflare logs.
 - **External monitor.** Point a free scheduler (cron-job.org, UptimeRobot) at `https://<site>/api/keepalive` every 15 min. This is the important half: it's independent of whether the Worker's cron fires, and it **emails on failure** — the gap that let the July breakage run for eight weeks. Nothing secret is exposed; the endpoint returns no keys.
 - **If a pause warning arrives anyway:** activity generated during the warning window prevents the pause. Hitting `/api/keepalive` a few times is enough.
-- **Not recommended:** Supabase Pro ($25/mo) removes pausing and adds daily backups, but that's a lot for a two-person cookbook when the cron covers it.
 
 ### Data backups
 
@@ -494,23 +535,29 @@ The keep-alive lowers the odds of a pause; it doesn't insure against one, and pe
 node --env-file=.env scripts/export-data.mjs
 ```
 
-Dumps `recipes`, `ingredients` and `recipe_ingredients` to JSON in [`backups/`](backups/), committed to the repo. Stable filenames and deterministic row order mean a re-run produces a clean diff — **git history is the backup history**. Re-run and commit after any batch of recipe work.
+Dumps `yumlog.recipes`, `yumlog.ingredients` and `yumlog.recipe_ingredients` to JSON in [`backups/`](backups/), committed to the repo. Stable filenames and deterministic row order mean a re-run produces a clean diff — **git history is the backup history**. Re-run and commit after any batch of recipe work.
 
-- `shopping_list` is **excluded** — authenticated-only, so the anon key can't read it, and transient enough that nothing is lost.
+- `shopping_list` is **excluded** — anon has no grant on it (members only), the script deliberately uses only the anon key, and the list is transient enough that nothing is lost.
+- `members` is **excluded** — it holds auth user ids, which only mean something in wrapt's project. Re-add members by email after a restore (see **Adding Zoe**).
 - Nothing secret is committed; all three exported tables are public-SELECT.
-- Restore order matters (`ingredients` → `recipes` → `recipe_ingredients`) — procedure in [`backups/README.md`](backups/README.md). That SQL is written from the schema, **not rehearsed** against an empty project.
+- Restore order matters (`ingredients` → `recipes` → `recipe_ingredients`) — procedure in [`backups/README.md`](backups/README.md).
 
 ---
 
 ## Recipe import (server-side)
 
-**`functions/api/import-recipe.ts`** is the only server-side code in the project that does real work. (The other two server-side paths both live in `worker.ts` and exist purely to keep Supabase awake: the `scheduled()` cron and `GET /api/keepalive` — see **Supabase keep-alive** above.) Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
+**`functions/api/import-recipe.ts`** is the only server-side code in the project that does real work. (The other two server-side paths both live in `worker.ts` and exist to keep Supabase awake and to health-check it: the `scheduled()` cron and `GET /api/keepalive` — see **Supabase keep-alive** above.) Everything else in this app is either static (recipe pages, built at deploy time) or client-side (auth, writes, shopping list — see **Critical rendering rule** above). This endpoint does not change that: it's called on demand from the create form to pre-fill fields from a pasted URL, never from a recipe read path. Recipe pages remain pre-rendered static HTML with no DB access at request time.
 
 It's a handler (`POST /api/import-recipe`) written in Pages-Function style (`onRequest({ request, env })`) but manually dispatched from `worker.ts` — see **Deployment (Cloudflare Workers, Git-connected)** above for why that dispatch step exists.
 
 ### Auth
 
-Reuses the existing Supabase session — the client (`initImportPanel` in `src/lib/recipe-form-ui.ts`) sends `Authorization: Bearer <access_token>` from the current session. The Function validates that token by calling `${PUBLIC_SUPABASE_URL}/auth/v1/user` with the anon key; a non-200 response is treated as unauthorized. Since public sign-ups are disabled, this is effectively Tim/Zoe-only, same as the rest of the write paths.
+Reuses the existing Supabase session — the client (`initImportPanel` in `src/lib/recipe-form-ui.ts`) sends `Authorization: Bearer <access_token>` from the current session. The Function checks two things:
+
+1. The token is a valid session — `${PUBLIC_SUPABASE_URL}/auth/v1/user` with the anon key; non-200 → **401**.
+2. The user is a **yumlog member** — `POST ${PUBLIC_SUPABASE_URL}/rest/v1/rpc/is_member` with the user's token, `Content-Profile: yumlog` and body `{}`; anything but `true` (including an error) → **403**. Fails closed.
+
+The second check is new with the move to wrapt's project: wrapt has public sign-ups, so a valid session alone would let any stranger spend Workers AI (and outbound fetches) through this endpoint. Same allowlist as every write path.
 
 ### Request / response contract
 
@@ -545,7 +592,7 @@ Success (`200`):
 }
 ```
 
-Errors are `{ "error": "message" }` with status `400` (bad body / invalid or disallowed URL), `401` (unauthorized), `405` (non-POST), `422` (couldn't fetch the page), `500` (server misconfigured — missing Supabase env), or `502` (LLM couldn't produce valid JSON after retry). Keep this shape stable — `recipe-form-ui.ts` depends on it directly.
+Errors are `{ "error": "message" }` with status `400` (bad body / invalid or disallowed URL), `401` (unauthorized), `403` (signed in but not a yumlog member), `405` (non-POST), `422` (couldn't fetch the page), `500` (server misconfigured — missing Supabase env), or `502` (LLM couldn't produce valid JSON after retry). Keep this shape stable — `recipe-form-ui.ts` depends on it directly.
 
 ### SSRF guard
 
@@ -579,7 +626,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   astro.config.mjs       ← Tailwind wired via vite.plugins: [tailwindcss()]
   package.json
   tsconfig.json
-  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding
+  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding, cron; env.preview (migration-only yumlog-preview Worker)
   worker.ts               ← Worker entrypoint — dispatches /api/* routes (import-recipe, keepalive), falls back to ASSETS; also holds the scheduled() Supabase keep-alive (see Deployment)
   .env                   ← Supabase URL + anon key (gitignored)
   .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
@@ -592,9 +639,11 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     recipe-normaliser.ts ← Workers AI prompt + response validation (normaliseRecipe)
     recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
 /backups/                ← committed JSON export of recipe data (see backups/README.md)
+/supabase/
+  /migrations/           ← 001–005: the yumlog schema, security, rebuild webhook, realtime (see Database schema)
+/migration/              ← the 2026 move into wrapt's project: stage1 recon, stage2 PLAN.md, stage3 working SQL + loadgen.py
 /scripts/
-  ingredient-registry-rpc.sql  ← merge + touch_recipes RPCs; run once in Supabase SQL editor
-  check-supabase-schema.mjs    ← verify expected columns and RPCs against live Supabase
+  check-supabase-schema.mjs    ← anon-key health check: public tables readable, shopping_list + RPCs locked down
   export-data.mjs              ← dump recipes/ingredients/recipe_ingredients to backups/
 /public/                 ← static assets (favicon, etc.)
 /src/
@@ -612,7 +661,9 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   /layouts/
     Layout.astro         ← shared HTML shell; fonts, wordmark, auth-aware nav; bottom nav on mobile
   /lib/
-    supabase.ts          ← Supabase client singleton (always import from here)
+    supabase.ts          ← Supabase client singleton, db.schema = yumlog (always import from here)
+    db-schema.ts         ← YUMLOG_DB_SCHEMA = 'yumlog' (also used by worker.ts / functions/)
+    build-guard.ts       ← failBuild(): stop the build on an errored/empty recipe query
     auth.ts              ← signIn, signOut, getSession, requireAuth, initAuthUI
     format.ts            ← toDisplayLabel, splitValues, parseStepLabel, stripBullet
     slug.ts              ← titleToSlug (hyphen-separated slugs)
@@ -639,9 +690,9 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
 - **Tailwind:** imported via `src/styles/global.css`. `Layout.astro` imports it — all pages that use the layout get Tailwind automatically.
 - **Fonts:** Newsreader + Hanken Grotesk loaded in `Layout.astro` via Fontsource; stacks wired in `@theme`.
 - **Brand guide:** visual design reference at `docs/brand-hearth.md`.
-- **Supabase client:** always import from `src/lib/supabase.ts`; never instantiate `createClient` elsewhere.
+- **Supabase client:** always import from `src/lib/supabase.ts`; never instantiate `createClient` elsewhere (the scripts in `scripts/` are the exception — they run under Node). It targets the `yumlog` schema; raw REST calls must send `Accept-Profile: yumlog` (reads) or `Content-Profile: yumlog` (writes/RPC) themselves.
 - **Format helpers:** always import `toDisplayLabel` and `splitValues` from `src/lib/format.ts` before rendering any category or protein value.
 - **Featured recipes:** edit `FEATURED_SLUGS` in `index.astro`. Use **hyphen slugs** as stored in the DB (e.g. `sourdough-bread`, not `sourdough_bread`). Order in the array controls display order.
 - **Auth UI toggling:** elements with `data-auth-only` / `data-nav-guest` are shown/hidden by `initAuthUI()` in `Layout.astro`.
 - **Dev server:** `npm run dev` → [http://localhost:4321](http://localhost:4321)
-- **Production preview:** `npm run build` then `npm run preview` (requires `.env` with Supabase keys at build time).
+- **Production preview:** `npm run build` then `npm run preview` (requires `.env` with Supabase keys at build time — and the build guard fails the build if they can't read recipes).
