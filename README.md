@@ -31,7 +31,7 @@ npm install
 Create a `.env` file in the repo root:
 
 ```
-PUBLIC_SUPABASE_URL=https://<wrapt-ref>.supabase.co
+PUBLIC_SUPABASE_URL=https://wncacqqtrixnqlykchyy.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<wrapt's anon key>
 ```
 

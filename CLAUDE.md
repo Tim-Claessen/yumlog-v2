@@ -433,7 +433,7 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 
 Yumlog has **no Supabase project of its own**. It lives in **wrapt's** project (Tim's Spotify-stats app), in the `yumlog` schema — see **Database schema**.
 
-- **URL:** `https://<wrapt-ref>.supabase.co` — wrapt's project URL; the current value is in the Cloudflare variables (and wrapt's own config). *TODO: fill in the ref here once the migration is live.*
+- **URL:** `https://wncacqqtrixnqlykchyy.supabase.co` — wrapt's project (ref `wncacqqtrixnqlykchyy`).
 - **Anon key format:** wrapt's legacy JWT anon key (the long `eyJ…` key), not the newer `sb_publishable_` format — both work but JWT is used here for compatibility.
 - The anon key is safe to expose publicly and is stored in `.env` as `PUBLIC_SUPABASE_ANON_KEY`.
 - The **service-role key** is never committed, and yumlog never uses it.
@@ -448,7 +448,7 @@ Until the 2026-09/10 migration, yumlog had its own Supabase project (ref `nrmimf
 ## Environment variables
 
 ```
-PUBLIC_SUPABASE_URL=https://<wrapt-ref>.supabase.co
+PUBLIC_SUPABASE_URL=https://wncacqqtrixnqlykchyy.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<wrapt's JWT anon key — see .env, never commit>
 ```
 
