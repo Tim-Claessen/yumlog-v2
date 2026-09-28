@@ -25,7 +25,7 @@ member guard; no grants to service_role (wrapt `/ask` can't read yumlog); rebuil
 pg_net + Vault secret `yumlog_deploy_hook` + statement-level trigger (no-op for non-members);
 realtime on shopping_list; FK indexes; hard freeze of old project at cutover; build guard;
 import-recipe member check; separate `yumlog-preview` Worker (`wrangler deploy --env preview`);
-revoke pg_net EXECUTE from API roles (005); 2-day soak before pausing old project.
+revoke pg_net EXECUTE from API roles (005 — turned out impossible, see Done); 2-day soak before pausing old project.
 
 ## Done
 - Stage 1 recon, Stage 2 plan, Stage 3 build (branch commits incl. `6682e8a`).
@@ -33,28 +33,25 @@ revoke pg_net EXECUTE from API roles (005); 2-day soak before pausing old projec
 - 4.2 pg_net enabled in wrapt (0.20.3, schema extensions).
 - 4.3 migrations 001–004 run in wrapt: **every row OK**. 003 INFO: Vault secret absent (expected),
   postgres can read vault, and `net.http_*` EXECUTE = true for anon/authenticated/**public**/postgres.
-- 005 was rewritten (commit `6682e8a`) because access is via PUBLIC: it now grants postgres
-  explicitly, revokes PUBLIC/anon/authenticated, and aborts with "005 ABORTED (nothing changed)"
-  if postgres would lose EXECUTE or anon/authenticated keep it.
+- 005: **aborted, nothing changed, not applied.** EXECUTE on `net.http_*` is granted to PUBLIC by
+  supabase_admin (owner; functions SECURITY INVOKER) — postgres can't revoke another role's grant.
+  Risk accepted (PLAN R19); step 6.6 dropped.
+- 4.4 `yumlog` added to Exposed schemas; wrapt still works.
+- 4.5 members: one row, Tim `2a368d57-…`.
+- 4.6 rehearsal load (run `20260928T134240Z-8a7541`, export 13:37 UTC): checksum grids identical
+  both sides — 201/51/483/10, md5s equal, sequences 1844/97, TimeZone UTC. (A hand-edited chunk
+  was caught by the swap's md5 check; paste generated files unchanged — dollar-quoted, apostrophes
+  are fine.) Files in gitignored `migration/stage3/out/`.
+- 4.7 `rls_tests.sql`: **40 PASS, 0 FAIL, 2 SKIP** (W1/W2 — webhook off until the Vault secret exists).
+- Branch pushed to origin (approved 2026-09-28).
 
-## Waiting on Tim (asked for approval, not yet given/returned)
-1. Run revised `supabase/migrations/005_optional_revoke_net_http.sql` in wrapt → grid
-   (expect `false/false/false/true`, all OK) or the ABORTED message.
-2. 4.4 Data API → Exposed schemas: add `yumlog` after `public`; then confirm
-   wrapt.timclaessen.com still works.
-3. 4.5 members insert (by email) → expect one row, id `2a368d57-…`.
-4. 4.6a `migration/stage3/export_from_old.sql` in the OLD project → Export CSV.
-
-## Next after that
-- 4.6b: `python migration/stage3/loadgen.py load <csv> --target wrapt` → give Tim chunk files +
-  swap (output in gitignored `migration/stage3/out/`); 4.6c/d swap + `checksum.sql` both sides,
-  must match exactly.
-- 4.7 `rls_tests.sql` → expect `RESULTS: n PASS, 0 FAIL`.
-- Push branch (needs approval) → 4.8 create `yumlog-preview` Worker (build vars = wrapt URL +
-  legacy anon JWT + NODE_VERSION=22; runtime vars as **Secrets**), its deploy hook into Vault.
-  Open question Q2: whether Workers Builds accepts `--env preview` naming; fallbacks in PLAN.
+## Next
+- 4.8 create `yumlog-preview` Worker (build vars = wrapt URL + legacy anon JWT + NODE_VERSION=22;
+  runtime vars as **Secrets**), its deploy hook into Vault as `yumlog_deploy_hook`; then re-run
+  `rls_tests.sql` to see W1/W2 PASS. Open question Q2: whether Workers Builds accepts
+  `--env preview` naming; fallbacks in PLAN.
 - 4.9–4.11 preview acceptance, build-guard test, wrapt regression checks → Stage 4 gate.
-- Stage 5 cutover and Stage 6 decommission per PLAN §4.
+- Stage 5 cutover (fresh export + load with a new run id) and Stage 6 decommission per PLAN §4.
 
 ## Known small issues (accepted, not fixed)
 UI shows edit controls to any signed-in wrapt user (DB refuses writes); login page copy says

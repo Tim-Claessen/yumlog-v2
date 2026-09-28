@@ -78,7 +78,7 @@ The SQL that builds it is **`supabase/migrations/`** — numbered, idempotent, e
 | `002_yumlog_security.sql` | grants, `is_member()`, RLS policies, the two RPCs |
 | `003_yumlog_rebuild_webhook.sql` | the recipes → Cloudflare rebuild trigger (Vault + pg_net) |
 | `004_yumlog_realtime.sql` | adds `shopping_list` to the `supabase_realtime` publication |
-| `005_optional_revoke_net_http.sql` | optional pg_net hardening — only if 003's report says so |
+| `005_optional_revoke_net_http.sql` | pg_net hardening — **doesn't work on Supabase, not applied** (supabase_admin's PUBLIC grant can't be revoked by postgres; risk accepted, PLAN R19) |
 
 Run them in order in wrapt's SQL editor. Column order and definitions match the original project exactly.
 

@@ -23,7 +23,7 @@ text. Every grid has a `status` column: `OK`, `MISMATCH` or `INFO`.
 |---|---|---|---|
 | `dryrun.sql` | WRAPT | no (rolls itself back) | 001–004 in one `do` block + checks; always ends in an error |
 | `../../supabase/migrations/001…004` | WRAPT | yes | the real schema build |
-| `../../supabase/migrations/005_optional_revoke_net_http.sql` | WRAPT | yes | only if 003's report shows anon/authenticated EXECUTE on `net.http_post` |
+| `../../supabase/migrations/005_optional_revoke_net_http.sql` | WRAPT | yes | **Don't run** — tried 2026-09-28, can't work on Supabase (grants are supabase_admin's; see PLAN R19). Aborts harmlessly. |
 | `rls_tests.sql` | WRAPT | no (rolls itself back) | grants/RLS/RPC/webhook cases; always ends in an error |
 | `export_from_old.sql` | OLD | no | the data out, as one CSV |
 | `checksum.sql` | both | no | counts + md5 per table + sequences; edit one value per project |
@@ -43,7 +43,7 @@ static`. `python migration/stage3/loadgen.py selftest` checks the generator offl
 |---|---|---|---|
 | 4.1 | `dryrun.sql` | WRAPT | An **error** starting `DRY RUN OK (all rolled back): tables=5 policies=13 functions=5 …`. Then run `select to_regnamespace('yumlog');` on its own → must be **NULL**. Send both. `DRY RUN FAILED`/any other error → send it, stop. |
 | 4.2 | Dashboard: **Database → Extensions → pg_net → Enable** | WRAPT | — |
-| 4.3 | `001_yumlog_schema.sql`, then `002_…`, `003_…`, `004_…` — one paste each | WRAPT | Each ends in a grid; all rows `OK` (003 also has `INFO` rows: pg_net version, Vault secret count, `net.http_*` EXECUTE for anon/authenticated). Send all four grids. If 003 shows `true` for anon or authenticated on `net.http_post`, also run `005` and send its grid. |
+| 4.3 | `001_yumlog_schema.sql`, then `002_…`, `003_…`, `004_…` — one paste each | WRAPT | Each ends in a grid; all rows `OK` (003 also has `INFO` rows: pg_net version, Vault secret count, `net.http_*` EXECUTE for anon/authenticated). Send all four grids. (003 will show `true` for anon/authenticated on `net.http_*` — accepted, PLAN R19; 005 can't fix it.) |
 | 4.4 | Dashboard: **Data API → Exposed schemas** → add `yumlog` after `public` | WRAPT | Then check wrapt still works (PLAN 4.11). |
 | 4.5 | `insert into yumlog.members (user_id, note) select id, 'Tim' from auth.users where email = 'timclaessen96@gmail.com' on conflict do nothing;` then `select m.user_id, u.email from yumlog.members m join auth.users u on u.id = m.user_id;` | WRAPT | Exactly one row: Tim, id `2a368d57-490e-4d71-919f-0693a639f323`. |
 | 4.6a | `export_from_old.sql` | OLD | **Export → CSV** → send the file. |

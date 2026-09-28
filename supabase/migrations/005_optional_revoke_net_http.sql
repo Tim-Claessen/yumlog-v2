@@ -1,6 +1,17 @@
 -- =============================================================================
 -- 005_optional_revoke_net_http.sql  --  OPTIONAL hardening of pg_net grants
 --
+-- STATUS:     DOES NOT WORK ON SUPABASE — NOT APPLIED (decision 2026-09-28).
+--             Run in wrapt, it aborted with "005 ABORTED (nothing changed)":
+--             anon/authenticated kept EXECUTE. The ACL shows why: the net.http_*
+--             functions are owned by supabase_admin, which granted EXECUTE to
+--             PUBLIC (grantor supabase_admin; no per-role grants). A REVOKE only
+--             removes grants the revoking role made, and postgres isn't a
+--             superuser on Supabase, so the SQL editor can't remove them. The
+--             functions are SECURITY INVOKER (prosecdef = false). Residual risk
+--             accepted as PLAN R19. Kept for the record; running it again is
+--             harmless (it aborts and rolls back).
+--
 -- RUN ONLY IF: the 003 verification report (rows "net.http_* EXECUTE
 --             anon/authenticated/public/postgres") shows anon or authenticated
 --             = true. On 2026-09-28 in wrapt it showed true/true/true/true, i.e.

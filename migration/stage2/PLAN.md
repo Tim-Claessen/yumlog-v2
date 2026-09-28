@@ -290,7 +290,7 @@ rebuild prod.
 | 6.3 | Delete Worker `yumlog-preview` and its deploy hook. Remove `env.preview` from `wrangler.jsonc`. Delete the **old** prod deploy hook (the one embedded in the old project's trigger; this rotates that secret). | Tim (CF) + Claude | CF-ENV, GIT | only the `supabase-wrapt` hook remains | recreate |
 | 6.4 | **Pause** the old yumlog project | Tim (SB dashboard) | PAUSE | project shows Paused | Restore (possible for 90 days) |
 | 6.5 | Calendar reminder at +75 days: confirm backups, then decide delete vs let it lapse | Tim | PAUSE (for the delete) | — | — |
-| 6.6 | Optional hardening: revoke EXECUTE on `net.http_get/http_post` from anon, authenticated (R19) **[T]** | Tim (SQL, wrapt) | SQL-W | `has_function_privilege` false | re-grant |
+| 6.6 | ~~Optional hardening: revoke EXECUTE on `net.http_*`~~ — **dropped**: not possible from the SQL editor (see R19). | — | — | — | — |
 
 ---
 
@@ -318,7 +318,7 @@ L/M/H = likelihood / impact.
 | R16 | **Wrapt anon can call `run_ask_sql`** (wrapt-side, pre-existing) → arbitrary read-only SQL as anon, incl. reading catalogues | H (it exists) | M (wrapt) | **Flag only.** Yumlog's design assumes it: no secrets in function or trigger source; nothing sensitive grantable to anon. Recommend a separate wrapt fix: `revoke execute on function public.run_ask_sql from public, anon, authenticated`. | wrapt, later |
 | R17 | **500 MB cap** (`plays` 137 MB and growing) → the DB goes read-only and yumlog writes break too | L (months away) | M | Yumlog adds <2 MB. Tim watches Usage monthly; shared fate noted in CLAUDE.md. | Tim |
 | R18 | **Old project paused before verified** | L | H | 2-day soak (6.1) + backups (6.2) before pause (6.4); PAUSE is a separate gate | 6.x |
-| R19 | **pg_net grants**: `net` schema USAGE is PUBLIC [V docs]; Supabase's install hook also grants EXECUTE on `net.http_*` to anon/authenticated [A]. The only anon SQL path (`run_ask_sql`) is read-only, so a queued request would fail [A]. | L | M | Checked in the 4.3 report; optional revoke in 6.6 | 4.3 / 6.6 |
+| R19 | **pg_net grants**: `net` schema USAGE is PUBLIC [V docs]; EXECUTE on `net.http_*` is granted to **PUBLIC by supabase_admin** (the owner), functions SECURITY INVOKER [V 2026-09-28, ACL query]. The only anon SQL path (`run_ask_sql`) is read-only, so a queued request would fail [A]. | L | M | **Accepted.** The revoke (005) can't work: postgres can only revoke grants it made, and isn't superuser — 005 aborted, nothing changed. | 4.3 / 6.6 |
 | R20 | **90-day deletion window** on the paused old project | M | L (after 6.2) | Backups committed first; calendar reminder (6.5) | Tim 6.5 |
 | R21 | **`.dev.vars` tracked** | H (it is) | L (public values) | `git rm --cached` (decision 14) | 3.10 |
 | R22 | **`/api/import-recipe` open to any wrapt user** → Workers AI spend + outbound fetches | M | M | Member check via `rpc/is_member` (3.10); test with a non-member token is not possible without a real account, so unit-read the code + Tim's positive test | 3.10 |
@@ -383,7 +383,7 @@ Menu paths as of 2026-09. Supabase moves things, so the older path is given in b
 | Q4 | Is `assets` inherited into `env.preview`? Is `triggers: {crons: []}` honoured as "no cron"? [A] | Preview correctness and cost | Preview build log + Worker → Settings → Triggers shows no cron |
 | Q5 | Does supabase-js always send `Accept-Profile: public` for wrapt's default client? [A] | R12 | 4.11 after 4.4 (wrapt works) settles it in practice |
 | Q6 | SQL editor paste/request size limit and CSV-export cell limit: not documented anywhere I found | R23 | Chunking + md5 check make it moot; the rehearsal proves it |
-| Q7 | Do Supabase's pg_net install hooks grant EXECUTE on `net.http_*` to anon/authenticated? [A] Docs confirm PUBLIC USAGE on schema `net` only [V]. | R19 | The 4.3 report prints `has_function_privilege('anon','net.http_post(...)','EXECUTE')` |
+| Q7 | **Answered 2026-09-28:** EXECUTE on `net.http_*` is granted to PUBLIC by supabase_admin (so anon/authenticated inherit it); not revocable by postgres. Was: do Supabase's pg_net install hooks grant EXECUTE on `net.http_*` to anon/authenticated? | R19 | The 4.3 report prints `has_function_privilege('anon','net.http_post(...)','EXECUTE')` |
 | Q8 | Do identity inserts need sequence USAGE? [A: no] | Grants | Granted anyway; the 4.7 Tim insert proves inserts work |
 | Q9 | Does Realtime deliver DELETE events to a role with no SELECT grant (anon)? | R6 (ids only) | Low value; accept. Could test with an anon subscriber on preview if Tim cares. |
 | Q10 | Wrapt Auth *Confirm email* setting (not in the Stage 1 facts) | Affects how easily a stranger reaches `authenticated`; the design is safe either way | Tim glances at **Authentication → Sign In / Providers** |
