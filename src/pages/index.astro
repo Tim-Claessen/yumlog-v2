@@ -1,11 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { supabase } from '../lib/supabase';
+import { failBuild } from '../lib/build-guard';
 import { toDisplayLabel, splitValues } from '../lib/format';
 
 const FEATURED_SLUGS = ['sourdough-bread', 'mixed-berry-muffins', 'mexican-rice-arroz-rojo'] as const;
 
-const [{ data: recipes }, { data: featuredRaw }] = await Promise.all([
+const [{ data: recipes, error: recipesError }, { data: featuredRaw, error: featuredError }] = await Promise.all([
   supabase
     .from('recipes')
     .select('slug, title, category, protein, cook_time_min')
@@ -16,7 +17,13 @@ const [{ data: recipes }, { data: featuredRaw }] = await Promise.all([
     .in('slug', [...FEATURED_SLUGS]),
 ]);
 
-const list = recipes ?? [];
+// Build guard: an error or an empty recipe list means the build can't see the
+// data, not that the cookbook is empty. Fail the build so the live site stays.
+if (recipesError) failBuild('the recipe list query failed', recipesError);
+if (featuredError) failBuild('the featured recipes query failed', featuredError);
+if (!recipes || recipes.length === 0) failBuild('the recipe list query returned 0 recipes');
+
+const list = recipes;
 const featuredBySlug = new Map((featuredRaw ?? []).map(r => [r.slug, r]));
 const featured = FEATURED_SLUGS
   .map(slug => featuredBySlug.get(slug))

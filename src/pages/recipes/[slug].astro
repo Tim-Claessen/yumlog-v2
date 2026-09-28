@@ -1,17 +1,21 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../lib/supabase';
+import { failBuild } from '../../lib/build-guard';
 import { toDisplayLabel, splitValues, parseStepLabel, stripBullet } from '../../lib/format';
 import { displayIngredientName } from '../../lib/ingredient';
 
 export async function getStaticPaths() {
-  const { data: recipes } = await supabase.from('recipes').select('slug');
-  return (recipes ?? []).map(r => ({ params: { slug: r.slug } }));
+  const { data: recipes, error } = await supabase.from('recipes').select('slug');
+  // Build guard (see lib/build-guard.ts): never deploy a site with no recipe pages.
+  if (error) failBuild('listing recipe slugs failed', error);
+  if (!recipes || recipes.length === 0) failBuild('listing recipe slugs returned 0 recipes');
+  return recipes.map(r => ({ params: { slug: r.slug } }));
 }
 
 const { slug } = Astro.params;
 
-const [{ data: recipe }, { data: ingredients }] = await Promise.all([
+const [{ data: recipe, error: recipeError }, { data: ingredients, error: ingredientsError }] = await Promise.all([
   supabase.from('recipes').select('*').eq('slug', slug!).single(),
   supabase
     .from('recipe_ingredients')
@@ -20,6 +24,9 @@ const [{ data: recipe }, { data: ingredients }] = await Promise.all([
     .order('id'),
 ]);
 
+// A half-rendered recipe (say, missing its ingredients) is worse than no deploy.
+if (recipeError) failBuild(`reading recipe "${slug}" failed`, recipeError);
+if (ingredientsError) failBuild(`reading the ingredients of "${slug}" failed`, ingredientsError);
 if (!recipe) return Astro.redirect('/');
 
 // Parse the multi-line method into individual steps (skip blank lines)

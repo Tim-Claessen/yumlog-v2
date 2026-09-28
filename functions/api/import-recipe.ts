@@ -6,6 +6,7 @@
 // CLAUDE.md for the response contract — Phase 2 depends on it, so keep
 // shapes stable.
 
+import { YUMLOG_DB_SCHEMA } from "../../src/lib/db-schema";
 import { fetchExistingCategories } from "../lib/recipe-categories";
 import {
   normaliseRecipe,
@@ -43,9 +44,12 @@ export const onRequest = async (context: RequestContext): Promise<Response> => {
     return jsonResponse({ error: "Server is misconfigured." }, 500);
   }
 
-  const authorized = await isAuthorized(request, env);
-  if (!authorized) {
+  const auth = await checkAuth(request, env);
+  if (auth === "unauthorized") {
     return jsonResponse({ error: "Unauthorized" }, 401);
+  }
+  if (auth === "forbidden") {
+    return jsonResponse({ error: "Your account isn't a Yumlog member, so it can't import recipes." }, 403);
   }
 
   let body: unknown;
@@ -120,12 +124,20 @@ function jsonResponse(body: unknown, status = 200): Response {
 // Auth
 // ---------------------------------------------------------------------------
 
-async function isAuthorized(request: Request, env: Env): Promise<boolean> {
+// Two checks. (1) The token is a valid Supabase session. (2) That user is on
+// the yumlog.members allowlist. Yumlog shares wrapt's Supabase project, which
+// has public sign-ups, so a valid session alone would let any stranger spend
+// Workers AI through this endpoint. yumlog.is_member() reads auth.uid() from
+// the token we forward, so it answers for the caller. Fails closed: any error
+// in the member check is "forbidden".
+type AuthResult = "ok" | "unauthorized" | "forbidden";
+
+async function checkAuth(request: Request, env: Env): Promise<AuthResult> {
   const header = request.headers.get("Authorization") ?? "";
   const match = /^Bearer\s+(.+)$/i.exec(header);
-  if (!match) return false;
+  if (!match) return "unauthorized";
   const token = match[1].trim();
-  if (!token) return false;
+  if (!token) return "unauthorized";
 
   try {
     const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/auth/v1/user`, {
@@ -134,9 +146,26 @@ async function isAuthorized(request: Request, env: Env): Promise<boolean> {
         Authorization: `Bearer ${token}`,
       },
     });
-    return res.ok;
+    if (!res.ok) return "unauthorized";
   } catch {
-    return false;
+    return "unauthorized";
+  }
+
+  try {
+    const res = await fetch(`${env.PUBLIC_SUPABASE_URL}/rest/v1/rpc/is_member`, {
+      method: "POST",
+      headers: {
+        apikey: env.PUBLIC_SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${token}`,
+        "Content-Profile": YUMLOG_DB_SCHEMA,
+        "Content-Type": "application/json",
+      },
+      body: "{}",
+    });
+    if (!res.ok) return "forbidden";
+    return (await res.json()) === true ? "ok" : "forbidden";
+  } catch {
+    return "forbidden";
   }
 }
 
