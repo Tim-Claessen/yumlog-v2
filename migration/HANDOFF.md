@@ -44,13 +44,20 @@ revoke pg_net EXECUTE from API roles (005 — turned out impossible, see Done); 
   are fine.) Files in gitignored `migration/stage3/out/`.
 - 4.7 `rls_tests.sql`: **40 PASS, 0 FAIL, 2 SKIP** (W1/W2 — webhook off until the Vault secret exists).
 - Branch pushed to origin (approved 2026-09-28).
+- 4.8 `yumlog-preview` Worker live (https://yumlog-preview.timclaessen96.workers.dev): 51 recipes,
+  `/api/keepalive` 200, no cron, runtime vars as Secrets, preview deploy hook in Vault. Q2 answered:
+  a dashboard-created `yumlog-preview` + `--env preview` works (no fallback needed). rls_tests re-run:
+  **42 PASS, 0 FAIL, 0 SKIP (webhook on)**.
+- **4.9–4.11 skipped by Tim's decision (2026-09-28)** — browser acceptance, build-guard test and wrapt
+  checks not run. Claude smoke-checked the preview's public pages only (home 51 links, recipe pages,
+  /sourdough, /login, /shopping, /api/keepalive). Logged-in flows (shopping, save → webhook rebuild,
+  realtime, registry, import) are untested before cutover; the 5.10 smoke test is the first check.
 
 ## Next
 - 4.8 create `yumlog-preview` Worker (build vars = wrapt URL + legacy anon JWT + NODE_VERSION=22;
   runtime vars as **Secrets**), its deploy hook into Vault as `yumlog_deploy_hook`; then re-run
   `rls_tests.sql` to see W1/W2 PASS. Open question Q2: whether Workers Builds accepts
   `--env preview` naming; fallbacks in PLAN.
-- 4.9–4.11 preview acceptance, build-guard test, wrapt regression checks → Stage 4 gate.
 - Stage 5 cutover (fresh export + load with a new run id) and Stage 6 decommission per PLAN §4.
 
 ## Known small issues (accepted, not fixed)

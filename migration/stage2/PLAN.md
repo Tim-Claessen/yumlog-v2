@@ -277,7 +277,7 @@ Recipe reading is unaffected the whole time. Only editing and the shopping list 
 **Rollback R-B (after cutover, before Stage 6):** (1) Cloudflare `yumlog` build + runtime vars → old
 values. (2) `git revert` the merge on main → build → deploy (schema `public` code against the old
 project). (3) If anything was written in wrapt since cutover: run `export` against wrapt's `yumlog`
-schema, load into the old `public` with `reverse_sync_to_old.sql` (old row-level webhook trigger
+schema, load into the old `public` with `loadgen.py load <csv> --target old` (stage3 README, "Rollback after cutover"; old row-level webhook trigger
 disabled during the load). (4) `unfreeze_old.sql`. (5) Delete the Vault secret so wrapt edits can't
 rebuild prod.
 
