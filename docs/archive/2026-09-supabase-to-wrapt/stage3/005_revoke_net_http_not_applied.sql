@@ -1,5 +1,6 @@
 -- =============================================================================
--- 005_optional_revoke_net_http.sql  --  OPTIONAL hardening of pg_net grants
+-- 005_revoke_net_http_not_applied.sql (was supabase/migrations/005_optional_revoke_net_http.sql)
+--   OPTIONAL hardening of pg_net grants
 --
 -- STATUS:     DOES NOT WORK ON SUPABASE — NOT APPLIED (decision 2026-09-28).
 --             Run in wrapt, it aborted with "005 ABORTED (nothing changed)":

@@ -7,11 +7,12 @@
 --             creates the objects only; who may touch them is 002.
 --             Tables, columns (incl. column order), defaults, identity, the
 --             category CHECK and the FKs match the old yumlog project's live
---             `public` schema exactly (migration/stage1 facts, 2026-09-28),
+--             `public` schema exactly (stage1 facts, 2026-09-28, in
+--             docs/archive/2026-09-supabase-to-wrapt/),
 --             with the FKs repointed at yumlog.*. New vs the old project:
 --             three FK indexes and yumlog.members.
 -- RUN IN:     wrapt's Supabase project -> SQL Editor -> New query -> paste all -> Run.
---             Run order: 001 -> 002 -> 003 -> 004 (005 is optional).
+--             Run order: 001 -> 002 -> 003 -> 004.
 -- IDEMPOTENT: yes. `if not exists` / `create or replace` / drop-then-create
 --             throughout; safe to re-run. It never alters an existing table's
 --             columns, so re-running is not a way to change them.

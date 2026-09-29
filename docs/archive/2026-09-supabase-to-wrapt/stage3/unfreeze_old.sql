@@ -2,7 +2,7 @@
 -- unfreeze_old.sql  --  undo freeze_old.sql (rollback path R-B step 4)
 --
 -- RUN IN:     the OLD yumlog project (ref nrmimftrjulvsgonrlzg) -> SQL Editor.
--- WHAT:       restores exactly the pre-freeze state (migration/stage1 facts +
+-- WHAT:       restores exactly the pre-freeze state (docs/archive/2026-09-supabase-to-wrapt/stage1 facts +
 --             the anon-RPC hotfix): INSERT, UPDATE, DELETE, TRUNCATE on the four
 --             tables back to anon and authenticated (both had them — the old
 --             project's RLS policies, not grants, kept anon out), and EXECUTE

@@ -12,7 +12,7 @@
 --             fails visibly. postgres / the SQL editor is unaffected, so the
 --             export still runs. REFERENCES, TRIGGER and MAINTAIN are left as
 --             they were (they don't write data).
--- PRE-FREEZE STATE (migration/stage1 facts + hotfix_revoke_anon_rpc.sql):
+-- PRE-FREEZE STATE (docs/archive/2026-09-supabase-to-wrapt/stage1 facts + hotfix_revoke_anon_rpc.sql):
 --             anon and authenticated had every table privilege; RPC EXECUTE was
 --             authenticated only (PUBLIC/anon removed by the hotfix). This file
 --             also re-revokes PUBLIC/anon on the RPCs, which is a no-op if the

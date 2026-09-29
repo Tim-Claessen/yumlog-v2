@@ -1,6 +1,7 @@
 {
-  "exported_at": "2026-09-09T14:26:44.392Z",
-  "source": "https://nrmimftrjulvsgonrlzg.supabase.co",
+  "exported_at": "2026-09-29T14:08:49.808Z",
+  "source": "https://wncacqqtrixnqlykchyy.supabase.co",
+  "schema": "yumlog",
   "row_counts": {
     "recipes": 51,
     "ingredients": 201,

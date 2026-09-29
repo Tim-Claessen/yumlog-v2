@@ -3,7 +3,7 @@
 Everything here was written without touching any database. The plan and the reasons
 are in [`../stage2/PLAN.md`](../stage2/PLAN.md); step numbers below (4.1, 5.4 …) are
 its step numbers. The permanent schema SQL lives in
-[`../../supabase/migrations/`](../../supabase/migrations/); this folder holds the
+[`../../../../supabase/migrations/`](../../../../supabase/migrations/); this folder holds the
 one-off working files.
 
 **Where to paste:** Supabase dashboard → pick the project → **SQL Editor** → **New
@@ -22,8 +22,8 @@ text. Every grid has a `status` column: `OK`, `MISMATCH` or `INFO`.
 | File | Project | Writes? | Purpose |
 |---|---|---|---|
 | `dryrun.sql` | WRAPT | no (rolls itself back) | 001–004 in one `do` block + checks; always ends in an error |
-| `../../supabase/migrations/001…004` | WRAPT | yes | the real schema build |
-| `../../supabase/migrations/005_optional_revoke_net_http.sql` | WRAPT | yes | **Don't run** — tried 2026-09-28, can't work on Supabase (grants are supabase_admin's; see PLAN R19). Aborts harmlessly. |
+| `../../../../supabase/migrations/001…004` | WRAPT | yes | the real schema build |
+| `005_revoke_net_http_not_applied.sql` (was `supabase/migrations/005_…`) | WRAPT | yes | **Don't run** — tried 2026-09-28, can't work on Supabase (grants are supabase_admin's; see PLAN R19). Aborts harmlessly. |
 | `rls_tests.sql` | WRAPT | no (rolls itself back) | grants/RLS/RPC/webhook cases; always ends in an error |
 | `export_from_old.sql` | OLD | no | the data out, as one CSV |
 | `checksum.sql` | both | no | counts + md5 per table + sequences; edit one value per project |
@@ -33,8 +33,8 @@ text. Every grid has a `status` column: `OK`, `MISMATCH` or `INFO`.
 | `out/` | — | — | generated load SQL (gitignored; contains data) |
 
 `dryrun.sql`, `checksum.sql` and the two `export_*.sql` files are **generated** —
-edit `loadgen.py` or the migrations, then run `python migration/stage3/loadgen.py
-static`. `python migration/stage3/loadgen.py selftest` checks the generator offline
+edit `loadgen.py` or the migrations, then run `python docs/archive/2026-09-supabase-to-wrapt/stage3/loadgen.py
+static`. `python docs/archive/2026-09-supabase-to-wrapt/stage3/loadgen.py selftest` checks the generator offline
 (CSV parsing, md5, chunking, quoting) and that the generated files are current.
 
 ## Stage 4 — build it in wrapt (old project stays live)

@@ -28,8 +28,9 @@
 -- IDEMPOTENT: yes (create or replace; drop trigger if exists then create).
 -- RESULT:     verification SELECT; rows marked INFO are facts to copy back,
 --             not pass/fail. The pg_net rows answer PLAN Q7/R19: if anon or
---             authenticated show EXECUTE = true on net.http_post, run
---             005_optional_revoke_net_http.sql.
+--             authenticated show EXECUTE = true on net.http_post, that is
+--             expected and accepted: Supabase grants it to PUBLIC and postgres
+--             can't revoke it (see docs/archive/2026-09-supabase-to-wrapt/stage3/005_revoke_net_http_not_applied.sql).
 -- ROLLBACK:   drop trigger if exists yumlog_rebuild_site on yumlog.recipes;
 --             drop function if exists yumlog.request_site_rebuild();
 -- =============================================================================
@@ -157,7 +158,7 @@ report(ord, item, expected, actual) as (
          case when to_regclass('vault.decrypted_secrets') is null then 'vault not installed'
               else has_table_privilege('postgres', 'vault.decrypted_secrets', 'SELECT')::text end
   union all
-  select 40, 'net.' || n.fn || ' EXECUTE anon/authenticated/public/postgres (INFO; anon or authenticated true => consider 005; postgres must be true)', 'INFO',
+  select 40, 'net.' || n.fn || ' EXECUTE anon/authenticated/public/postgres (INFO; anon/authenticated true is expected on Supabase; postgres must be true)', 'INFO',
          has_function_privilege('anon', n.oid, 'EXECUTE')::text
          || '/' || has_function_privilege('authenticated', n.oid, 'EXECUTE')::text
          || '/' || has_function_privilege('public', n.oid, 'EXECUTE')::text

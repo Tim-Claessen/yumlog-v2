@@ -45,9 +45,9 @@ email (CLAUDE.md → *Adding Zoe* shows the insert).
 Nothing here is secret; `recipes`, `ingredients` and `recipe_ingredients` are all
 public-SELECT, so this is the same data any visitor can already read.
 
-> The files up to the 2026 migration were exported from yumlog's old, standalone
-> Supabase project (`public` schema). The rows are identical in shape to
-> `yumlog.*`, so they restore the same way.
+> Since 2026-09-29 the files are exported from wrapt's project (`yumlog` schema).
+> Earlier commits came from yumlog's old, standalone project (`public` schema);
+> the rows are identical in shape, so they restore the same way.
 
 ## Restoring
 
@@ -81,7 +81,7 @@ A JSON array containing a single quote (`'`) breaks the `'…'` literal; either
 double every `'` in the pasted text or use a dollar-quoted literal
 (`$json$[ … ]$json$`) instead. A paste over ~50 KB (`recipe_ingredients.json`,
 `recipes.json`) may be too big for the SQL editor in one go — for anything large,
-`migration/stage3/loadgen.py` shows the chunked approach.
+`docs/archive/2026-09-supabase-to-wrapt/stage3/loadgen.py` shows the chunked approach.
 
 3. **Re-add members** (see above), set the Vault secret, and push a commit (or save
    any recipe) so the static pages rebuild.
@@ -90,4 +90,4 @@ double every `'` in the pasted text or use a dollar-quoted literal
 > rehearsed against a real empty project. The *data* is verified complete
 > (referential integrity checked at export: no orphan ingredient lines, no unknown
 > ingredient references); the exact SQL may need adjusting on the day. The
-> migration's own load (`migration/stage3/`) is the rehearsed path.
+> migration's own load (`docs/archive/2026-09-supabase-to-wrapt/stage3/`) is the rehearsed path.

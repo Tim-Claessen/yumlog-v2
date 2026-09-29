@@ -78,9 +78,8 @@ The SQL that builds it is **`supabase/migrations/`** — numbered, idempotent, e
 | `002_yumlog_security.sql` | grants, `is_member()`, RLS policies, the two RPCs |
 | `003_yumlog_rebuild_webhook.sql` | the recipes → Cloudflare rebuild trigger (Vault + pg_net) |
 | `004_yumlog_realtime.sql` | adds `shopping_list` to the `supabase_realtime` publication |
-| `005_optional_revoke_net_http.sql` | pg_net hardening — **doesn't work on Supabase, not applied** (supabase_admin's PUBLIC grant can't be revoked by postgres; risk accepted, PLAN R19) |
 
-Run them in order in wrapt's SQL editor. Column order and definitions match the original project exactly.
+Run them in order in wrapt's SQL editor. Column order and definitions match the original project exactly. (Anon/authenticated can EXECUTE `net.http_*` because Supabase grants it to PUBLIC and `postgres` can't revoke it — an attempted fix is archived as `docs/archive/2026-09-supabase-to-wrapt/stage3/005_revoke_net_http_not_applied.sql`; risk accepted.)
 
 ```sql
 -- Canonical ingredient registry (one row per normalised name)
@@ -161,7 +160,7 @@ The model: **anon reads public data; members do everything; nobody else gets any
 - **Authenticated ≠ Tim/Zoe.** Wrapt has public sign-ups, so every write policy and both RPCs check the allowlist. A signed-up stranger can read the public tables, sees **0** shopping-list rows, and gets RLS errors on writes and "not a yumlog member" from the RPCs.
 - **service_role has no grants — not even schema USAGE.** Wrapt's `/ask` feature runs model-generated SQL as service_role; BYPASSRLS skips policies, not privileges, so it gets *permission denied for schema yumlog*. Don't "fix" that by following Supabase's docs recipe of granting service_role — it's deliberate.
 - **Anon can run SQL through wrapt's `public.run_ask_sql`** (EXECUTE is granted to PUBLIC on the wrapt side — a pre-existing wrapt issue). It's read-only, but it can read anything anon can, including the catalogues: `pg_get_functiondef`, `pg_get_triggerdef`. So **no secrets in any function or trigger source** — hence the Vault-based webhook (see **Deployment**).
-- Proven by `migration/stage3/rls_tests.sql` (anon, a fabricated stranger, service_role, Tim), which rolls itself back.
+- Proven by `docs/archive/2026-09-supabase-to-wrapt/stage3/rls_tests.sql` (anon, a fabricated stranger, service_role, Tim), which rolls itself back.
 
 ### Key design decisions
 
@@ -443,7 +442,7 @@ Yumlog has **no Supabase project of its own**. It lives in **wrapt's** project (
 
 ### Migration history
 
-Until the 2026-09/10 migration, yumlog had its own Supabase project (ref `nrmimftrjulvsgonrlzg`, tables in `public`, a Database Webhook with the deploy-hook URL in the trigger). The move is planned in `migration/stage2/PLAN.md`; the working SQL is in `migration/stage3/` (its README gives the run order). After cutover the old project stays **frozen** (read-only, `migration/stage3/freeze_old.sql`) for a 2-day soak, then is **paused** — restorable for 90 days, then gone. *Update this note with the actual cutover and pause dates.*
+Until 2026-09-29 yumlog had its own Supabase project (ref `nrmimftrjulvsgonrlzg`, tables in `public`, a Database Webhook with the deploy-hook URL in the trigger). It moved into wrapt's project on **2026-09-29** (PR #2); the old project was frozen and **paused the same day** — restorable from its dashboard until about 2026-12-28, then gone. The plan, working SQL (dry run, RLS tests, load generator, rollback) and step-by-step log are archived in [`docs/archive/2026-09-supabase-to-wrapt/`](docs/archive/2026-09-supabase-to-wrapt/README.md).
 
 ## Environment variables
 
@@ -452,7 +451,7 @@ PUBLIC_SUPABASE_URL=https://wncacqqtrixnqlykchyy.supabase.co
 PUBLIC_SUPABASE_ANON_KEY=<wrapt's JWT anon key — see .env, never commit>
 ```
 
-Set the same variables in the Cloudflare project → **Settings** → **Variables and Secrets** (Production, and Preview if needed). Also set `NODE_VERSION=22` (required by `package.json` engines).
+Set the same variables on the Cloudflare Worker `yumlog` in **both** places: **Settings → Build → Variables and secrets** (build) and **Settings → Variables and Secrets** (runtime, type **Secret**). Also set the build variable `NODE_VERSION=22` (required by `package.json` engines).
 
 > **Build variables ≠ runtime variables.** Workers Builds keeps these separate. `NODE_VERSION` and the Supabase vars used by `astro build` are **build** variables; but `worker.ts` and `functions/api/*` read `env.PUBLIC_SUPABASE_URL` / `env.PUBLIC_SUPABASE_ANON_KEY` at **runtime**, so both Supabase vars must also exist as runtime **Variables and Secrets**. Set only on the build side, the static site builds perfectly and the Worker's server-side code fails at runtime — `/api/import-recipe` returns 500 and the keep-alive cron dies silently. Verify with `GET /api/keepalive` (see **Supabase keep-alive** below).
 
@@ -481,7 +480,7 @@ npx wrangler dev                # runs worker.ts + the static build locally at h
 ```
 `wrangler dev` is the fastest way to catch a routing mistake before it ever reaches production — hit the route with `curl` and check the status code (404 = not wired in `worker.ts`; 401/405/etc. = it's reaching the handler).
 
-**If the Cloudflare dashboard doesn't show a "Functions" or "Bindings" tab** for this project — that's expected for a Workers-Builds project, not a sign something is broken. Bindings (`AI`, `ASSETS`) come from `wrangler.jsonc` directly; there's no dashboard step required to "turn them on" for this project type. Use `wrangler deploy --dry-run` above instead of hunting for a dashboard page.
+**If the Cloudflare dashboard doesn't show a "Functions" or "Bindings" tab** for this project — that's expected for a Workers-Builds project, not a sign something is broken. Bindings (`AI`, `ASSETS`) and the custom domain `yumlog.timclaessen.com` (`routes`, `custom_domain: true`) come from `wrangler.jsonc` directly; there's no dashboard step required to "turn them on" for this project type. Keep the domain declared there — without it, every deploy warns that it will override the dashboard's domain route. Use `wrangler deploy --dry-run` above instead of hunting for a dashboard page.
 
 ### Build settings
 
@@ -513,9 +512,6 @@ Test by saving a recipe and watching **Deployments** (Cloudflare); `select * fro
 
 Git pushes to `main` also trigger builds; the trigger covers DB-only changes from the create/edit form.
 
-### Preview Worker (migration only)
-
-While migrating, a second Worker **`yumlog-preview`** builds the `migrate/supabase-to-wrapt` branch with `npx wrangler deploy --env preview` (the `env.preview` block in `wrangler.jsonc`: re-declared `ai` + `assets`, no cron). It has its own build variables and its own deploy hook; during testing the Vault secret points at **that** hook, so preview edits rebuild the preview, never production. Its runtime `PUBLIC_SUPABASE_*` vars are set in its dashboard as **Secrets** (not in `wrangler.jsonc`). Delete the Worker, its hook and the `env.preview` block after cutover (PLAN step 6.3).
 
 ### Supabase keep-alive (free-tier auto-pause)
 
@@ -626,12 +622,13 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   astro.config.mjs       ← Tailwind wired via vite.plugins: [tailwindcss()]
   package.json
   tsconfig.json
-  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding, cron; env.preview (migration-only yumlog-preview Worker)
+  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding, custom domain (yumlog.timclaessen.com), cron
   worker.ts               ← Worker entrypoint — dispatches /api/* routes (import-recipe, keepalive), falls back to ASSETS; also holds the scheduled() Supabase keep-alive (see Deployment)
   .env                   ← Supabase URL + anon key (gitignored)
   .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
 /docs/
   brand-hearth.md        ← Hearth brand guide (colours, type, component patterns)
+  /archive/              ← finished one-off work, kept for the record: the 2026-09 move into wrapt's Supabase project, the URL-importer run sheet
 /functions/              ← Server-side route handlers, written Pages-Function style but dispatched manually from worker.ts (see Deployment)
   /api/
     import-recipe.ts     ← POST /api/import-recipe: auth check, fetch + SSRF guard, JSON-LD/LLM pipeline
@@ -640,8 +637,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
 /backups/                ← committed JSON export of recipe data (see backups/README.md)
 /supabase/
-  /migrations/           ← 001–005: the yumlog schema, security, rebuild webhook, realtime (see Database schema)
-/migration/              ← the 2026 move into wrapt's project: stage1 recon, stage2 PLAN.md, stage3 working SQL + loadgen.py
+  /migrations/           ← 001–004: the yumlog schema, security, rebuild webhook, realtime (see Database schema)
 /scripts/
   check-supabase-schema.mjs    ← anon-key health check: public tables readable, shopping_list + RPCs locked down
   export-data.mjs              ← dump recipes/ingredients/recipe_ingredients to backups/
