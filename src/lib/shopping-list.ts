@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { YUMLOG_DB_SCHEMA } from './db-schema';
 import { normalizeIngredient } from './ingredient';
 import type { IngredientSection } from './ingredient-sections';
 import {
@@ -240,7 +241,7 @@ export function subscribeShoppingList(onChange: () => void): () => void {
     .channel('shopping_list_changes')
     .on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'shopping_list' },
+      { event: '*', schema: YUMLOG_DB_SCHEMA, table: 'shopping_list' },
       () => onChange(),
     )
     .subscribe();

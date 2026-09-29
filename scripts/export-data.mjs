@@ -11,8 +11,10 @@
 // produces a clean git diff — git history *is* the backup history. Commit the
 // result; recipe data is public-SELECT anyway, so nothing secret lands in it.
 //
-// shopping_list is deliberately NOT exported: it's authenticated-only (the anon
-// key can't read it) and it's transient by nature. Nothing is lost.
+// shopping_list is deliberately NOT exported: it's members-only (anon has no
+// grant on yumlog.shopping_list, so the anon key gets "permission denied") and
+// it's transient by nature. Nothing is lost. This script stays anon-only on
+// purpose — no service key, nothing secret in .env.
 
 import { createClient } from '@supabase/supabase-js';
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -26,7 +28,11 @@ if (!url || !key) {
   process.exit(1);
 }
 
-const supabase = createClient(url, key);
+// Yumlog's tables live in the `yumlog` schema of wrapt's Supabase project.
+// Same value as src/lib/db-schema.ts (Node can't import the .ts file) — keep in step.
+const YUMLOG_DB_SCHEMA = 'yumlog';
+
+const supabase = createClient(url, key, { db: { schema: YUMLOG_DB_SCHEMA } });
 const OUT_DIR = join(process.cwd(), 'backups');
 const PAGE_SIZE = 1000;
 
@@ -63,7 +69,7 @@ for (const table of TABLES) {
 
 await writeFile(
   join(OUT_DIR, 'manifest.json'),
-  `${JSON.stringify({ exported_at: new Date().toISOString(), source: url, row_counts: counts }, null, 2)}\n`,
+  `${JSON.stringify({ exported_at: new Date().toISOString(), source: url, schema: YUMLOG_DB_SCHEMA, row_counts: counts }, null, 2)}\n`,
   'utf8',
 );
 console.log(`\nWrote ${TABLES.length + 1} files to backups/`);

@@ -3,6 +3,8 @@
 // instead of inventing a new one. Best-effort — on any failure, callers get
 // an empty list and the model falls back to null for category.
 
+import { YUMLOG_DB_SCHEMA } from "../../src/lib/db-schema";
+
 export interface SupabaseEnv {
   PUBLIC_SUPABASE_URL: string;
   PUBLIC_SUPABASE_ANON_KEY: string;
@@ -14,6 +16,7 @@ export async function fetchExistingCategories(env: SupabaseEnv): Promise<string[
       headers: {
         apikey: env.PUBLIC_SUPABASE_ANON_KEY,
         Authorization: `Bearer ${env.PUBLIC_SUPABASE_ANON_KEY}`,
+        "Accept-Profile": YUMLOG_DB_SCHEMA,
       },
     });
     if (!res.ok) return [];
