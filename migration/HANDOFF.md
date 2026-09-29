@@ -57,7 +57,7 @@ revoke pg_net EXECUTE from API roles (005 — turned out impossible, see Done); 
 Live state right now: old project still live and **not** frozen (prod site uses it); wrapt `yumlog`
 holds the rehearsal data (preview edits there are throwaway); Vault `yumlog_deploy_hook` = the
 **preview** hook; yumlog-preview Worker up. Nothing in production has changed.
-1. 4.12 open the PR `migrate/supabase-to-wrapt` → `main` (review done; do not merge) — ask Tim first.
+1. 4.12 **done 2026-09-29**: PR #2 opened (https://github.com/Tim-Claessen/yumlog-v2/pull/2) — do not merge until 5.9.
 2. Stage 5 cutover per PLAN §4 / stage3 README (Tim needs ~45–75 min; tell Zoe). Before T0: Tim copies
    the current prod `yumlog` build + runtime Supabase values to a password manager. Then 5.0 prod
    deploy hook → 5.1 freeze → 5.2 export → Claude runs `loadgen.py load <csv> --target wrapt` (new
