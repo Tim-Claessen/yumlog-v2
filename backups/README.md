@@ -53,7 +53,7 @@ public-SELECT, so this is the same data any visitor can already read.
 
 Into wrapt's project (or any Supabase project), in the SQL editor:
 
-1. **Build the schema first:** run `supabase/migrations/001` → `004` in order.
+1. **Build the schema first:** run `db/001` → `004` in order.
    Leave the Vault secret `yumlog_deploy_hook` unset until the data is back, so
    the restore doesn't trigger a rebuild.
 2. **Load in FK order** — `ingredients`, then `recipes`, then `recipe_ingredients`

@@ -70,7 +70,7 @@ Side effect to tell her: she'd also be able to sign in on wrapt's login page, bu
 
 All of yumlog's tables live in the **`yumlog` schema** of wrapt's Supabase project — never in `public`, which is wrapt's. The client reaches them because `src/lib/supabase.ts` is created with `db: { schema: YUMLOG_DB_SCHEMA }` (hard-coded `'yumlog'` in `src/lib/db-schema.ts`), and because `yumlog` is listed in Supabase → **Data API → Exposed schemas** (with `public` kept first, so wrapt's default is unchanged). Raw REST calls (`worker.ts`, `functions/`) send `Accept-Profile: yumlog` / `Content-Profile: yumlog` themselves.
 
-The SQL that builds it is **`supabase/migrations/`** — numbered, idempotent, each ending in a verification query:
+The SQL that builds it is **`db/`** — numbered, idempotent, each ending in a verification query. It's pasted into the SQL editor by hand; the Supabase CLI isn't used, so there's no `supabase/` folder.
 
 | File | What |
 |---|---|
@@ -236,7 +236,7 @@ Auth-gated dedicated screen (not embedded in `/settings`). Edits **`ingredients`
 - **Delete** — only when zero recipe lines **and** zero shopping rows; DB `on delete restrict` as backstop.
 - **Category-only edit** — no site rebuild (shopping list reads category client-side; static recipe pages use `display_name`).
 
-Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the RPCs in `supabase/migrations/002_yumlog_security.sql` (members only).
+Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the RPCs in `db/002_yumlog_security.sql` (members only).
 
 ### Display pluralisation (recipe detail only)
 
@@ -290,7 +290,7 @@ Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-
 - **Reorder** — pointer-based drag on grip only (`shopping-list-drag.ts`): fixed-position lift + shadow, dashed placeholder, FLIP animation on siblings, gentle settle on drop. **Grouped mode:** drag within one section only. **Flat mode:** drag across the single list. Persists global `position` via `setItemOrder()`.
 - **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear done, clear all (with confirmation dialog).
 
-> **Realtime is on** for `yumlog.shopping_list` (`supabase/migrations/004_yumlog_realtime.sql` adds it to the `supabase_realtime` publication; it was never enabled in the old project, so live sync is new). Realtime checks RLS per subscriber, so only members receive row events.
+> **Realtime is on** for `yumlog.shopping_list` (`db/004_yumlog_realtime.sql` adds it to the `supabase_realtime` publication; it was never enabled in the old project, so live sync is new). Realtime checks RLS per subscriber, so only members receive row events.
 
 ---
 
@@ -494,7 +494,7 @@ npx wrangler dev                # runs worker.ts + the static build locally at h
 
 Recipes are pre-rendered at build time (see **Critical rendering rule**). After create/edit in the app, the DB updates immediately; static HTML updates when Cloudflare finishes the next deploy (~2–3 min).
 
-How it works (`supabase/migrations/003_yumlog_rebuild_webhook.sql`):
+How it works (`db/003_yumlog_rebuild_webhook.sql`):
 
 - A **statement-level** trigger `yumlog_rebuild_site` (AFTER INSERT/UPDATE/DELETE on `yumlog.recipes`) calls `yumlog.request_site_rebuild()`, which POSTs to the Cloudflare deploy hook with **pg_net**. Statement-level: a merge that touches 10 recipes sends one POST, not 10.
 - The hook URL is a **Vault secret** named `yumlog_deploy_hook` (wrapt dashboard → **Integrations → Vault**). It never appears in SQL — function and trigger source is readable through wrapt's `run_ask_sql` (see **Row-level security**), and the SQL editor keeps history. Create and edit it in the Vault UI only.
@@ -636,8 +636,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     recipe-normaliser.ts ← Workers AI prompt + response validation (normaliseRecipe)
     recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
 /backups/                ← committed JSON export of recipe data (see backups/README.md)
-/supabase/
-  /migrations/           ← 001–004: the yumlog schema, security, rebuild webhook, realtime (see Database schema)
+/db/                     ← 001–004: the yumlog schema SQL — tables, security, rebuild webhook, realtime; pasted into wrapt's SQL editor (see Database schema)
 /scripts/
   check-supabase-schema.mjs    ← anon-key health check: public tables readable, shopping_list + RPCs locked down
   export-data.mjs              ← dump recipes/ingredients/recipe_ingredients to backups/

@@ -4,7 +4,7 @@
 // Run:  node --env-file=.env scripts/check-supabase-schema.mjs
 //
 // Yumlog's tables live in the `yumlog` schema of wrapt's Supabase project, and
-// anon is deliberately limited (supabase/migrations/002_yumlog_security.sql):
+// anon is deliberately limited (db/002_yumlog_security.sql):
 // it can read recipes/ingredients/recipe_ingredients, but gets "permission
 // denied" on shopping_list and on the RPCs. For those, a permission error is
 // the expected, healthy answer — it proves the object exists and is locked down.

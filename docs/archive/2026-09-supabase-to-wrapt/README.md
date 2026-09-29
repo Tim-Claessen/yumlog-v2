@@ -3,7 +3,7 @@
 **Finished.** Yumlog moved out of its own Supabase project into a `yumlog` schema in wrapt's project
 (to free a free-plan slot). Cutover 2026-09-29 (PR #2); the old project was paused the same day.
 This folder is the historical record — nothing here is needed to run the app. The live schema SQL
-is [`supabase/migrations/`](../../../supabase/migrations/).
+is [`db/`](../../../db/).
 
 | Folder | What |
 |---|---|

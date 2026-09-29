@@ -1,6 +1,6 @@
 // The Postgres schema yumlog's tables live in. Yumlog shares wrapt's Supabase
 // project, and its tables sit in their own `yumlog` schema (not `public`) —
-// see CLAUDE.md "Database schema" and supabase/migrations/.
+// see CLAUDE.md "Database schema" and db/.
 //
 // Hard-coded rather than an env var on purpose: the schema is part of the data
 // model, not deployment config, and another build-vs-runtime variable is

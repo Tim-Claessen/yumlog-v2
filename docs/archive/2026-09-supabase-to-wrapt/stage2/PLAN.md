@@ -1,7 +1,7 @@
 # Stage 2 — Plan and risk register: yumlog → wrapt's Supabase project
 
 Written 2026-09-28. Inputs: yumlog `CLAUDE.md`, `README.md`, `docs/archive/2026-09-supabase-to-wrapt/stage1/*`, wrapt `CLAUDE.md` +
-`supabase/migrations/*` (read-only), the Stage 1 live SQL facts, and vendor docs (cited inline).
+`db/*` (read-only), the Stage 1 live SQL facts, and vendor docs (cited inline).
 
 Markers: **[V]** verified (live SQL output, repo file, or vendor doc quoted). **[A]** assumption — the
 step that proves or disproves it is named. **[T]** needs Tim's explicit choice.
@@ -52,7 +52,7 @@ step that proves or disproves it is named. **[T]** needs Tim's explicit choice.
 | 12 | Data-copy method | Export SQL in the old project → CSV (one row per table: count, md5, JSON) → Claude generates a **staging + swap** load SQL → Tim pastes into wrapt → checksum SQL in wrapt | No npm. JSON round-trips exactly via `jsonb_populate_recordset`. The md5 in the export lets Claude detect a truncated CSV before anything is loaded. | Per-row INSERT text generated in SQL: larger, harder to escape. `pg_dump`: CLI. The `backups/*.json` files: stale and exclude `shopping_list` (fine as a fallback only). |
 | 13 | Schema name in code | **Hard-code** `'yumlog'` in one module (`src/lib/db-schema.ts`), imported by `supabase.ts`, `worker.ts`, `functions/lib/*`, scripts | The schema is part of the data model, not deployment config. An env var would add another build-vs-runtime mismatch surface, the exact failure CLAUDE.md warns about. Env var **names** stay the same; only values change. | `PUBLIC_SUPABASE_SCHEMA` env var. |
 | 14 | `.dev.vars` tracked despite `.gitignore` | `git rm --cached .dev.vars` on the branch. It stays in history, but it only holds the URL + anon key (public) [V: names only inspected]. | — | Rewriting history: not worth it for public values. |
-| 15 | Where migration SQL lives | yumlog repo `supabase/migrations/001_…sql` onward (numbered, idempotent, wrapt-style header). Working copies in `docs/archive/2026-09-supabase-to-wrapt/stage3/`. | Yumlog owns the schema. Wrapt's repo stays untouched. | Put it in wrapt's repo: off-limits. |
+| 15 | Where migration SQL lives | yumlog repo `db/001_…sql` onward (numbered, idempotent, wrapt-style header). Working copies in `docs/archive/2026-09-supabase-to-wrapt/stage3/`. | Yumlog owns the schema. Wrapt's repo stays untouched. | Put it in wrapt's repo: off-limits. |
 | 16 | FK indexes | Add indexes on `recipe_ingredients(recipe_slug)`, `recipe_ingredients(ingredient)`, `shopping_list(ingredient)` **[T]** | None exist today [V]. Cascades and per-recipe reads benefit. Harmless at this size. | Strict parity. |
 | 17 | Keep-alive cron | Keep it, now pointed at `yumlog.*` via `Accept-Profile`. | Wrapt is already kept awake by its 2-hourly sync, so the cron is now belt-and-braces. `/api/keepalive` stays useful as the health check for grants and exposure. | Remove it: loses the external-monitor health check. |
 
@@ -211,7 +211,7 @@ Supabase dashboard setting. **CF-ENV** = Cloudflare env vars or settings. **MERG
 | # | What | Who | Gate | Verification | Rollback |
 |---|---|---|---|---|---|
 | 3.1 | Create branch `migrate/supabase-to-wrapt` | Claude | GIT | `git status` | delete branch |
-| 3.2 | `supabase/migrations/001_yumlog_schema.sql`: schema, 4 tables, constraints, FK indexes, members, updated_at trigger. Idempotent (`if not exists`, `create or replace`). | Claude | — | self-review; dry run 4.1 | n/a |
+| 3.2 | `db/001_yumlog_schema.sql`: schema, 4 tables, constraints, FK indexes, members, updated_at trigger. Idempotent (`if not exists`, `create or replace`). | Claude | — | self-review; dry run 4.1 | n/a |
 | 3.3 | `002_yumlog_security.sql`: grants, default privileges, `is_member`, policies, RPCs (§3.2–3.4) | Claude | — | 4.1, 4.7 | n/a |
 | 3.4 | `003_yumlog_rebuild_webhook.sql` (§3.5) | Claude | — | 4.1, 4.9 | n/a |
 | 3.5 | `004_yumlog_realtime.sql`: idempotent `alter publication supabase_realtime add table yumlog.shopping_list` inside a `do` block that checks `pg_publication_tables` first | Claude | — | 4.9 | `alter publication … drop table …` |
