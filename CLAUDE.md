@@ -70,16 +70,16 @@ Side effect to tell her: she'd also be able to sign in on wrapt's login page, bu
 
 All of yumlog's tables live in the **`yumlog` schema** of wrapt's Supabase project — never in `public`, which is wrapt's. The client reaches them because `src/lib/supabase.ts` is created with `db: { schema: YUMLOG_DB_SCHEMA }` (hard-coded `'yumlog'` in `src/lib/db-schema.ts`), and because `yumlog` is listed in Supabase → **Data API → Exposed schemas** (with `public` kept first, so wrapt's default is unchanged). Raw REST calls (`worker.ts`, `functions/`) send `Accept-Profile: yumlog` / `Content-Profile: yumlog` themselves.
 
-The SQL that builds it is **`db/`** — numbered, idempotent, each ending in a verification query. It's pasted into the SQL editor by hand; the Supabase CLI isn't used, so there's no `supabase/` folder.
+The SQL that built it was run once, by hand, in wrapt's SQL editor, and is no longer in the working tree. It lives in git history at commit `85d1965` (`db/`, four numbered, idempotent files, each ending in a verification query) — e.g. `git show 85d1965:db/002_yumlog_security.sql`. The live database is the source of truth; the notes below describe it.
 
-| File | What |
+| File (in `85d1965`) | What |
 |---|---|
 | `001_yumlog_schema.sql` | schema, the four tables, FK indexes, `members`, the `shopping_list.updated_at` trigger |
 | `002_yumlog_security.sql` | grants, `is_member()`, RLS policies, the two RPCs |
 | `003_yumlog_rebuild_webhook.sql` | the recipes → Cloudflare rebuild trigger (Vault + pg_net) |
 | `004_yumlog_realtime.sql` | adds `shopping_list` to the `supabase_realtime` publication |
 
-Run them in order in wrapt's SQL editor. Column order and definitions match the original project exactly. (Anon/authenticated can EXECUTE `net.http_*` because Supabase grants it to PUBLIC and `postgres` can't revoke it — an attempted fix is archived as `docs/archive/2026-09-supabase-to-wrapt/stage3/005_revoke_net_http_not_applied.sql`; risk accepted.)
+Column order and definitions match the original project exactly. Anon/authenticated can EXECUTE `net.http_*` because Supabase grants it to PUBLIC and `postgres` can't revoke it — risk accepted.
 
 ```sql
 -- Canonical ingredient registry (one row per normalised name)
@@ -160,7 +160,7 @@ The model: **anon reads public data; members do everything; nobody else gets any
 - **Authenticated ≠ Tim/Zoe.** Wrapt has public sign-ups, so every write policy and both RPCs check the allowlist. A signed-up stranger can read the public tables, sees **0** shopping-list rows, and gets RLS errors on writes and "not a yumlog member" from the RPCs.
 - **service_role has no grants — not even schema USAGE.** Wrapt's `/ask` feature runs model-generated SQL as service_role; BYPASSRLS skips policies, not privileges, so it gets *permission denied for schema yumlog*. Don't "fix" that by following Supabase's docs recipe of granting service_role — it's deliberate.
 - **Anon can run SQL through wrapt's `public.run_ask_sql`** (EXECUTE is granted to PUBLIC on the wrapt side — a pre-existing wrapt issue). It's read-only, but it can read anything anon can, including the catalogues: `pg_get_functiondef`, `pg_get_triggerdef`. So **no secrets in any function or trigger source** — hence the Vault-based webhook (see **Deployment**).
-- Proven by `docs/archive/2026-09-supabase-to-wrapt/stage3/rls_tests.sql` (anon, a fabricated stranger, service_role, Tim), which rolls itself back.
+- Proven at migration time by an RLS test script (anon, a fabricated stranger, service_role, Tim — 42 pass); it's in git history at `85d1965` (`docs/archive/2026-09-supabase-to-wrapt/stage3/rls_tests.sql`).
 
 ### Key design decisions
 
@@ -236,7 +236,7 @@ Auth-gated dedicated screen (not embedded in `/settings`). Edits **`ingredients`
 - **Delete** — only when zero recipe lines **and** zero shopping rows; DB `on delete restrict` as backstop.
 - **Category-only edit** — no site rebuild (shopping list reads category client-side; static recipe pages use `display_name`).
 
-Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the RPCs in `db/002_yumlog_security.sql` (members only).
+Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the two RPCs, members only (defined in `002_yumlog_security.sql`, see **Database schema**).
 
 ### Display pluralisation (recipe detail only)
 
@@ -290,7 +290,7 @@ Vanilla TypeScript island — `shopping.astro` client script → `shopping-list-
 - **Reorder** — pointer-based drag on grip only (`shopping-list-drag.ts`): fixed-position lift + shadow, dashed placeholder, FLIP animation on siblings, gentle settle on drop. **Grouped mode:** drag within one section only. **Flat mode:** drag across the single list. Persists global `position` via `setItemOrder()`.
 - **Other actions** — tick off (`checked`), edit qty/unit inline, delete, clear done, clear all (with confirmation dialog).
 
-> **Realtime is on** for `yumlog.shopping_list` (`db/004_yumlog_realtime.sql` adds it to the `supabase_realtime` publication; it was never enabled in the old project, so live sync is new). Realtime checks RLS per subscriber, so only members receive row events.
+> **Realtime is on** for `yumlog.shopping_list` (`004_yumlog_realtime.sql` added it to the `supabase_realtime` publication; it was never enabled in the old project, so live sync is new). Realtime checks RLS per subscriber, so only members receive row events.
 
 ---
 
@@ -442,7 +442,7 @@ Yumlog has **no Supabase project of its own**. It lives in **wrapt's** project (
 
 ### Migration history
 
-Until 2026-09-29 yumlog had its own Supabase project (ref `nrmimftrjulvsgonrlzg`, tables in `public`, a Database Webhook with the deploy-hook URL in the trigger). It moved into wrapt's project on **2026-09-29** (PR #2); the old project was frozen and **paused the same day** — restorable from its dashboard until about 2026-12-28, then gone. The plan, working SQL (dry run, RLS tests, load generator, rollback) and step-by-step log are archived in [`docs/archive/2026-09-supabase-to-wrapt/`](docs/archive/2026-09-supabase-to-wrapt/README.md).
+Until 2026-09-29 yumlog had its own Supabase project (ref `nrmimftrjulvsgonrlzg`, tables in `public`, a Database Webhook with the deploy-hook URL in the trigger). It moved into wrapt's project on **2026-09-29** (PR #2); the old project was frozen and **paused the same day** — restorable from its dashboard until about 2026-12-28, then gone. The plan, working SQL (dry run, RLS tests, load generator, rollback) and step-by-step log were deleted afterwards; they're in git history at commit `85d1965` under `docs/archive/2026-09-supabase-to-wrapt/`.
 
 ## Environment variables
 
@@ -494,7 +494,7 @@ npx wrangler dev                # runs worker.ts + the static build locally at h
 
 Recipes are pre-rendered at build time (see **Critical rendering rule**). After create/edit in the app, the DB updates immediately; static HTML updates when Cloudflare finishes the next deploy (~2–3 min).
 
-How it works (`db/003_yumlog_rebuild_webhook.sql`):
+How it works (`003_yumlog_rebuild_webhook.sql`, see **Database schema**):
 
 - A **statement-level** trigger `yumlog_rebuild_site` (AFTER INSERT/UPDATE/DELETE on `yumlog.recipes`) calls `yumlog.request_site_rebuild()`, which POSTs to the Cloudflare deploy hook with **pg_net**. Statement-level: a merge that touches 10 recipes sends one POST, not 10.
 - The hook URL is a **Vault secret** named `yumlog_deploy_hook` (wrapt dashboard → **Integrations → Vault**). It never appears in SQL — function and trigger source is readable through wrapt's `run_ask_sql` (see **Row-level security**), and the SQL editor keeps history. Create and edit it in the Vault UI only.
@@ -628,7 +628,6 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
 /docs/
   brand-hearth.md        ← Hearth brand guide (colours, type, component patterns)
-  /archive/              ← finished one-off work, kept for the record: the 2026-09 move into wrapt's Supabase project, the URL-importer run sheet
 /functions/              ← Server-side route handlers, written Pages-Function style but dispatched manually from worker.ts (see Deployment)
   /api/
     import-recipe.ts     ← POST /api/import-recipe: auth check, fetch + SSRF guard, JSON-LD/LLM pipeline
@@ -636,7 +635,6 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     recipe-normaliser.ts ← Workers AI prompt + response validation (normaliseRecipe)
     recipe-categories.ts ← fetch existing recipes.category values for the LLM prompt
 /backups/                ← committed JSON export of recipe data (see backups/README.md)
-/db/                     ← 001–004: the yumlog schema SQL — tables, security, rebuild webhook, realtime; pasted into wrapt's SQL editor (see Database schema)
 /scripts/
   check-supabase-schema.mjs    ← anon-key health check: public tables readable, shopping_list + RPCs locked down
   export-data.mjs              ← dump recipes/ingredients/recipe_ingredients to backups/

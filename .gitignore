@@ -24,8 +24,5 @@ __pycache__/
 # Secrets folder
 _secrets/
 
-# Generated migration load SQL (contains data, incl. the shopping list)
-docs/archive/2026-09-supabase-to-wrapt/stage3/out/
-
 # Windows system file
 Thumbs.db

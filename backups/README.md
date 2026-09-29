@@ -53,7 +53,8 @@ public-SELECT, so this is the same data any visitor can already read.
 
 Into wrapt's project (or any Supabase project), in the SQL editor:
 
-1. **Build the schema first:** run `db/001` → `004` in order.
+1. **Build the schema first:** run `db/001` → `004` in order. They're no longer in
+   the working tree — get them from git history: `git show 85d1965:db/001_yumlog_schema.sql` (and 002–004).
    Leave the Vault secret `yumlog_deploy_hook` unset until the data is back, so
    the restore doesn't trigger a rebuild.
 2. **Load in FK order** — `ingredients`, then `recipes`, then `recipe_ingredients`
@@ -81,7 +82,7 @@ A JSON array containing a single quote (`'`) breaks the `'…'` literal; either
 double every `'` in the pasted text or use a dollar-quoted literal
 (`$json$[ … ]$json$`) instead. A paste over ~50 KB (`recipe_ingredients.json`,
 `recipes.json`) may be too big for the SQL editor in one go — for anything large,
-`docs/archive/2026-09-supabase-to-wrapt/stage3/loadgen.py` shows the chunked approach.
+the migration's load generator (git history, `85d1965`: `docs/archive/2026-09-supabase-to-wrapt/stage3/loadgen.py`) shows the chunked approach.
 
 3. **Re-add members** (see above), set the Vault secret, and push a commit (or save
    any recipe) so the static pages rebuild.
@@ -90,4 +91,4 @@ double every `'` in the pasted text or use a dollar-quoted literal
 > rehearsed against a real empty project. The *data* is verified complete
 > (referential integrity checked at export: no orphan ingredient lines, no unknown
 > ingredient references); the exact SQL may need adjusting on the day. The
-> migration's own load (`docs/archive/2026-09-supabase-to-wrapt/stage3/`) is the rehearsed path.
+> migration's own load (git history, `85d1965`) is the rehearsed path.

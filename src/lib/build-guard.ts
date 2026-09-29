@@ -11,7 +11,7 @@
 const LIKELY_CAUSES =
   'Likely causes: the PUBLIC_SUPABASE_URL / PUBLIC_SUPABASE_ANON_KEY build variables point at the ' +
   'wrong project or are missing; "yumlog" is not in Supabase → Data API → Exposed schemas; or anon ' +
-  'lacks SELECT on yumlog.* (db/002_yumlog_security.sql).';
+  'lacks SELECT on yumlog.* (see CLAUDE.md "Database schema").';
 
 /** Throw with a message that says what failed and where to look. */
 export function failBuild(what: string, error?: { message?: string } | null): never {

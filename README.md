@@ -82,8 +82,7 @@ src/pages/          Routes (homepage, recipes, shopping, create, settings)
 src/lib/            Supabase client, auth, shopping list, ingredient logic
 src/layouts/        Shared shell, fonts, wordmark, navigation
 src/styles/         Tailwind + Hearth colour tokens (global.css @theme)
-docs/               Brand and design reference (brand-hearth.md); docs/archive/ holds finished one-off work
-db/                 The yumlog schema SQL: tables, security, rebuild webhook, realtime (numbered, idempotent)
+docs/               Brand and design reference (brand-hearth.md)
 scripts/            Schema health check, data export
 backups/            Committed JSON export of the recipe data (see backups/README.md)
 public/             Static assets (favicon, etc.)
@@ -93,7 +92,7 @@ Detailed architecture, schema, UI patterns, and conventions live in [CLAUDE.md](
 
 ## Database
 
-Yumlog's tables live in the **`yumlog` schema of wrapt's Supabase project** (not in `public`, which is wrapt's). The SQL that builds the schema is in [`db/`](db/) — run `001` → `004` in order in the SQL editor; each file is idempotent and ends with a verification query. Editing is gated on the `yumlog.members` allowlist, because wrapt's project has public sign-ups. Details in [CLAUDE.md → Database schema](CLAUDE.md#database-schema).
+Yumlog's tables live in the **`yumlog` schema of wrapt's Supabase project** (not in `public`, which is wrapt's). The SQL that built the schema was a one-off and isn't in the working tree; it's in git history at commit `85d1965` (`db/001`–`004`). Editing is gated on the `yumlog.members` allowlist, because wrapt's project has public sign-ups. Details in [CLAUDE.md → Database schema](CLAUDE.md#database-schema).
 
 Both Node scripts read the Supabase vars from `.env`, so they need Node's `--env-file` flag:
 
