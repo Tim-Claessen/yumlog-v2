@@ -158,7 +158,7 @@ export async function renameCanonicalIngredient(
       p_ingredient: newName,
     });
     if (touchErr) {
-      console.warn('touch_recipes_for_ingredient failed — run scripts/ingredient-registry-rpc.sql', touchErr);
+      console.warn('touch_recipes_for_ingredient failed — see supabase/migrations/002_yumlog_security.sql', touchErr);
     } else {
       rebuildTriggered = true;
     }

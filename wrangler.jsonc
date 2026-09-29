@@ -20,5 +20,42 @@
   // of it (a pause warning still arrived on 2026-09-09).
   "triggers": {
     "crons": ["0 */6 * * *"]
+  },
+
+  // ---------------------------------------------------------------------------
+  // Migration preview Worker (`npx wrangler deploy --env preview`) — a separate
+  // Worker, "yumlog-preview" (Wrangler names it <name>-<env>), built from the
+  // migrate/supabase-to-wrapt branch by its own Workers Builds project with
+  // its own build variables. Nothing above changes for production: top-level
+  // keys apply only when no --env is given. Remove this block once the
+  // migration is done (PLAN step 6.3).
+  //
+  //  * ai      — bindings are NOT inherited by environments; re-declared.
+  //  * assets  — re-declared (same values) rather than relying on inheritance,
+  //              so the preview serves the static build either way.
+  //  * triggers — inheritable, so the prod cron would be copied; overridden to
+  //              none. The preview needs no keep-alive (wrapt's own sync keeps
+  //              the project awake) and /api/keepalive still works on demand.
+  //  * vars    — deliberately absent. PUBLIC_SUPABASE_URL / _ANON_KEY for the
+  //              preview's runtime are set in the dashboard on yumlog-preview
+  //              (Settings → Variables and Secrets) as type **Secret**:
+  //              `wrangler deploy` replaces dashboard *Text* vars with the
+  //              config's `vars` unless keep_vars is set, but never touches
+  //              Secrets. Committing them here would mean committing values we
+  //              don't have (a placeholder would break /api/*), and keep_vars is
+  //              top-level only, so setting it would change production too.
+  "env": {
+    "preview": {
+      "assets": {
+        "directory": "./dist",
+        "binding": "ASSETS"
+      },
+      "ai": {
+        "binding": "AI"
+      },
+      "triggers": {
+        "crons": []
+      }
+    }
   }
 }

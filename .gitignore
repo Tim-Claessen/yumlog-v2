@@ -17,11 +17,15 @@ node_modules/
 .env.*.local
 .dev.vars
 
-# Python venv
+# Python venv / bytecode
 .venv/
+__pycache__/
 
 # Secrets folder
 _secrets/
+
+# Generated migration load SQL (contains data, incl. the shopping list)
+migration/stage3/out/
 
 # Windows system file
 Thumbs.db

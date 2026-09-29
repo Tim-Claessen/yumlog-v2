@@ -9,6 +9,7 @@
 // "Critical rendering rule").
 import { onRequest as handleImportRecipe } from "./functions/api/import-recipe";
 import type { AiBinding } from "./functions/lib/recipe-normaliser";
+import { YUMLOG_DB_SCHEMA } from "./src/lib/db-schema";
 
 interface Env {
   ASSETS: { fetch(request: Request): Promise<Response> };
@@ -25,7 +26,9 @@ interface ScheduledEvent {
 // Supabase pauses Free-plan projects that don't see "a few user requests to
 // the database each day over the previous week". These are the tables the
 // keep-alive reads — cheap, public-SELECT, and enough to register as real
-// user database activity.
+// user database activity. (Yumlog now shares wrapt's project, which wrapt's
+// own sync keeps awake; the ping stays as the health check for yumlog's
+// grants and Data API exposure.)
 const KEEP_ALIVE_PATHS = [
   "recipes?select=slug&limit=1",
   "ingredients?select=name&limit=1",
@@ -53,6 +56,9 @@ async function pingSupabase(env: Env): Promise<KeepAliveResult> {
   const headers = {
     apikey: env.PUBLIC_SUPABASE_ANON_KEY,
     Authorization: `Bearer ${env.PUBLIC_SUPABASE_ANON_KEY}`,
+    // Yumlog's tables live in the `yumlog` schema; without this PostgREST
+    // looks in `public` (wrapt's) and 404s.
+    "Accept-Profile": YUMLOG_DB_SCHEMA,
   };
 
   const checks = await Promise.all(
