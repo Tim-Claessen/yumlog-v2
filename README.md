@@ -10,7 +10,7 @@ The UI uses the **Hearth** design direction — editorial Newsreader serif, Hank
 
 Hosted on **Cloudflare Workers**, connected to GitHub repo [`Tim-Claessen/yumlog-v2`](https://github.com/Tim-Claessen/yumlog-v2) via Workers-Builds (auto-deploys on push to `main`).
 
-> **This is not Cloudflare Pages**, despite living in the same "Workers & Pages" dashboard section. That distinction matters as soon as you touch anything server-side (the recipe importer) — see [`worker.ts`](worker.ts) and the big callout in [CLAUDE.md → Deployment](CLAUDE.md#deployment-cloudflare-workers--not-classic-pages) before troubleshooting Cloudflare issues. Short version: `functions/api/import-recipe.ts` does **not** auto-route the way it would on Pages — `worker.ts` is what actually wires `/api/import-recipe` up, and there's no "Functions"/"Bindings" dashboard tab to go looking for on this project type.
+> **This is not Cloudflare Pages**, despite living in the same "Workers & Pages" dashboard section. That distinction matters as soon as you touch anything server-side (the recipe importer) — see [`worker.ts`](worker.ts) and the big callout in [AGENTS.md → Deployment](AGENTS.md#deployment-cloudflare-workers--not-classic-pages) before troubleshooting Cloudflare issues. Short version: `functions/api/import-recipe.ts` does **not** auto-route the way it would on Pages — `worker.ts` is what actually wires `/api/import-recipe` up, and there's no "Functions"/"Bindings" dashboard tab to go looking for on this project type.
 
 ## Features
 
@@ -47,7 +47,7 @@ Recipe pages are generated at build time from Supabase. After adding a recipe in
 
 ## Deployment
 
-**Cloudflare Workers (Workers-Builds Git integration) — not Cloudflare Pages.** Static output (`dist/`) is served via the `assets` binding in `wrangler.jsonc`; `worker.ts` is the `main` entrypoint and the *only* place that routes anything to server-side code. There's no Astro adapter and no SSR — see [CLAUDE.md](CLAUDE.md#deployment-cloudflare-workers--not-classic-pages) for the full explanation, common pitfalls, and how to verify bindings/routing with `wrangler` yourself instead of hunting through the dashboard.
+**Cloudflare Workers (Workers-Builds Git integration) — not Cloudflare Pages.** Static output (`dist/`) is served via the `assets` binding in `wrangler.jsonc`; `worker.ts` is the `main` entrypoint and the *only* place that routes anything to server-side code. There's no Astro adapter and no SSR — see [AGENTS.md](AGENTS.md#deployment-cloudflare-workers--not-classic-pages) for the full explanation, common pitfalls, and how to verify bindings/routing with `wrangler` yourself instead of hunting through the dashboard.
 
 | Setting | Value |
 | -------- | ----- |
@@ -60,7 +60,7 @@ Set `PUBLIC_SUPABASE_URL` and `PUBLIC_SUPABASE_ANON_KEY` as Cloudflare **Variabl
 
 > **Build variables and runtime variables are separate in Workers Builds.** Both Supabase vars are needed in *both* places: `astro build` reads them at build time, and `worker.ts` / `functions/api/*` read them at runtime. Set only on the build side, the site builds perfectly while the server-side code fails at runtime — `/api/import-recipe` returns 500 and the keep-alive cron dies silently. `GET /api/keepalive` tells you which state you're in.
 
-Recipe create/edit/delete fires a statement-level trigger on `yumlog.recipes` that POSTs (via pg_net) to a Cloudflare deploy hook stored in Supabase Vault, so static pages rebuild automatically (~2–3 min). See [CLAUDE.md](CLAUDE.md) for the webhook and ingredient-registry rebuild details.
+Recipe create/edit/delete fires a statement-level trigger on `yumlog.recipes` that POSTs (via pg_net) to a Cloudflare deploy hook stored in Supabase Vault, so static pages rebuild automatically (~2–3 min). See [AGENTS.md](AGENTS.md) for the webhook and ingredient-registry rebuild details.
 
 ### Keeping Supabase awake
 
@@ -88,11 +88,11 @@ backups/            Committed JSON export of the recipe data (see backups/README
 public/             Static assets (favicon, etc.)
 ```
 
-Detailed architecture, schema, UI patterns, and conventions live in [CLAUDE.md](CLAUDE.md) — the primary reference for development on this project. Visual design details are in [docs/brand-hearth.md](docs/brand-hearth.md).
+Detailed architecture, schema, UI patterns, and conventions live in [AGENTS.md](AGENTS.md) — the primary reference for development on this project. Visual design details are in [docs/brand-hearth.md](docs/brand-hearth.md).
 
 ## Database
 
-Yumlog's tables live in the **`yumlog` schema of wrapt's Supabase project** (not in `public`, which is wrapt's). The SQL that built the schema was a one-off and isn't in the working tree; it's in git history at commit `85d1965` (`db/001`–`004`). Editing is gated on the `yumlog.members` allowlist, because wrapt's project has public sign-ups. Details in [CLAUDE.md → Database schema](CLAUDE.md#database-schema).
+Yumlog's tables live in the **`yumlog` schema of wrapt's Supabase project** (not in `public`, which is wrapt's). The SQL that built the schema was a one-off and isn't in the working tree; it's in git history at commit `85d1965` (`db/001`–`004`). Editing is gated on the `yumlog.members` allowlist, because wrapt's project has public sign-ups. Details in [AGENTS.md → Database schema](AGENTS.md#database-schema).
 
 Both Node scripts read the Supabase vars from `.env`, so they need Node's `--env-file` flag:
 

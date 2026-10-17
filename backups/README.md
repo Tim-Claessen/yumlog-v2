@@ -6,7 +6,7 @@ Supabase project.
 
 **Why:** the Supabase project is on the Free plan, which auto-pauses after ~7 days
 of low activity. The keep-alive in [`worker.ts`](../worker.ts) reduces the odds of
-that (see CLAUDE.md → *Supabase keep-alive*) but doesn't insure against it — per
+that (see AGENTS.md → *Supabase keep-alive*) but doesn't insure against it — per
 the pause email, a project left paused for 90 days can no longer be unpaused.
 These files are the insurance.
 
@@ -40,7 +40,7 @@ lost by omitting it.
 
 **`members` is excluded too.** It holds auth user ids, which only mean something
 inside the Supabase project they came from. After a restore, re-add members by
-email (CLAUDE.md → *Adding Zoe* shows the insert).
+email (AGENTS.md → *Adding Zoe* shows the insert).
 
 Nothing here is secret; `recipes`, `ingredients` and `recipe_ingredients` are all
 public-SELECT, so this is the same data any visitor can already read.

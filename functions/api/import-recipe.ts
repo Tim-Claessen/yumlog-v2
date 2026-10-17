@@ -3,7 +3,7 @@
 // Auth-gated proxy that fetches a recipe URL, pulls out JSON-LD Recipe data
 // if present (falling back to readable page text otherwise), then runs the
 // result through an LLM to normalise it into the app's recipe shape. See
-// CLAUDE.md for the response contract — Phase 2 depends on it, so keep
+// AGENTS.md for the response contract — Phase 2 depends on it, so keep
 // shapes stable.
 
 import { YUMLOG_DB_SCHEMA } from "../../src/lib/db-schema";

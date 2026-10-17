@@ -12,7 +12,7 @@ import {
 const RECIPE_SLUG = 'sourdough-bread';
 
 // Baker's percentages are derived at BUILD time. This page is public and static —
-// it never touches Supabase at read time (CLAUDE.md → Critical rendering rule).
+// it never touches Supabase at read time (AGENTS.md → Critical rendering rule).
 const { data: lines } = await supabase
   .from('recipe_ingredients')
   .select('ingredient, quantity')

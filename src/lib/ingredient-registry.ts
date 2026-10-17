@@ -158,7 +158,7 @@ export async function renameCanonicalIngredient(
       p_ingredient: newName,
     });
     if (touchErr) {
-      console.warn('touch_recipes_for_ingredient failed — see CLAUDE.md "Database schema"', touchErr);
+      console.warn('touch_recipes_for_ingredient failed — see AGENTS.md "Database schema"', touchErr);
     } else {
       rebuildTriggered = true;
     }

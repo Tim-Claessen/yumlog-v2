@@ -2,7 +2,7 @@
 //
 // Wraps the LLM call behind a single normaliseRecipe() function so the
 // underlying provider (currently Workers AI) can be swapped later without
-// touching the calling Function. See CLAUDE.md "Stored text formats" and
+// touching the calling Function. See AGENTS.md "Stored text formats" and
 // "Ingredient normalisation and display" for the rules encoded in the
 // prompt below.
 

@@ -2,7 +2,7 @@
   // Deployed via Cloudflare's Workers-Builds Git integration (not the
   // classic Pages product) — functions/ does NOT auto-route here, so
   // worker.ts manually dispatches /api/* routes and falls back to ASSETS
-  // for the static build. See CLAUDE.md "Deployment (Cloudflare)".
+  // for the static build. See AGENTS.md "Deployment (Cloudflare)".
   "name": "yumlog",
   "compatibility_date": "2025-01-01",
   "main": "worker.ts",

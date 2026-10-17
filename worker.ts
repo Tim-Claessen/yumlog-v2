@@ -5,7 +5,7 @@
 // auto-route on its own (that's a Pages-only convention). This entrypoint
 // manually dispatches known API routes to their handlers and falls back to
 // serving the static build (env.ASSETS) for everything else, which keeps
-// recipe pages exactly as static/pre-rendered as before (see CLAUDE.md
+// recipe pages exactly as static/pre-rendered as before (see AGENTS.md
 // "Critical rendering rule").
 import { onRequest as handleImportRecipe } from "./functions/api/import-recipe";
 import type { AiBinding } from "./functions/lib/recipe-normaliser";
@@ -45,7 +45,7 @@ interface KeepAliveResult {
 async function pingSupabase(env: Env): Promise<KeepAliveResult> {
   if (!env.PUBLIC_SUPABASE_URL || !env.PUBLIC_SUPABASE_ANON_KEY) {
     // Almost always means the vars were set as Workers *build* variables but
-    // not as runtime Variables and Secrets — see CLAUDE.md "Environment
+    // not as runtime Variables and Secrets — see AGENTS.md "Environment
     // variables". Previously this failed silently every night.
     return {
       ok: false,
