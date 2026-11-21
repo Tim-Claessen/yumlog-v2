@@ -306,7 +306,7 @@
   {
     "id": 1803,
     "recipe_slug": "cadju-curry",
-    "ingredient": "onion",
+    "ingredient": "brown onion",
     "display_name": "onion",
     "quantity": 1,
     "unit": "each"
@@ -466,7 +466,7 @@
   {
     "id": 1403,
     "recipe_slug": "cauliflower-biryani",
-    "ingredient": "long red chilli",
+    "ingredient": "red chilli",
     "display_name": "long red chilli",
     "quantity": 0.5,
     "unit": "each"
@@ -546,7 +546,7 @@
   {
     "id": 1413,
     "recipe_slug": "cheesy-garlic-sourdough-focaccia",
-    "ingredient": "mozzarella cheese",
+    "ingredient": "mozzarella",
     "display_name": "mozzarella cheese",
     "quantity": 150,
     "unit": "g"
@@ -634,7 +634,7 @@
   {
     "id": 1829,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "vegetable oil",
+    "ingredient": "neutral oil",
     "display_name": "vegetable oil",
     "quantity": 2,
     "unit": "tbsp"
@@ -642,7 +642,7 @@
   {
     "id": 1830,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "large onion, finely chopped (about 1 cup)",
+    "ingredient": "brown onion",
     "display_name": "large onion, finely chopped (about 1 cup)",
     "quantity": 1,
     "unit": "each"
@@ -650,7 +650,7 @@
   {
     "id": 1831,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "cloves garlic, minced (about 1 tablespoon)",
+    "ingredient": "garlic clove",
     "display_name": "cloves garlic, minced (about 1 tablespoon)",
     "quantity": 2,
     "unit": "each"
@@ -658,7 +658,7 @@
   {
     "id": 1832,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "minced fresh ginger",
+    "ingredient": "ginger",
     "display_name": "minced fresh ginger",
     "quantity": 2,
     "unit": "tbsp"
@@ -666,7 +666,7 @@
   {
     "id": 1833,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "kosher salt",
+    "ingredient": "salt",
     "display_name": "kosher salt",
     "quantity": 1.5,
     "unit": "tsp"
@@ -690,7 +690,7 @@
   {
     "id": 1836,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "ground turmeric",
+    "ingredient": "turmeric",
     "display_name": "ground turmeric",
     "quantity": 1,
     "unit": "tsp"
@@ -698,7 +698,7 @@
   {
     "id": 1837,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "ground cumin",
+    "ingredient": "cumin",
     "display_name": "ground cumin",
     "quantity": 1,
     "unit": "tsp"
@@ -714,7 +714,7 @@
   {
     "id": 1839,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "indian chili powder or cayenne pepper (or to taste)",
+    "ingredient": "cayenne pepper",
     "display_name": "Indian chili powder or cayenne pepper (or to taste)",
     "quantity": 0.25,
     "unit": "tsp"
@@ -738,7 +738,7 @@
   {
     "id": 1842,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "baby spinach or trimmed regular spinach, (washed and dried)",
+    "ingredient": "spinach",
     "display_name": "baby spinach or trimmed regular spinach, (washed and dried)",
     "quantity": 8,
     "unit": "oz"
@@ -746,7 +746,7 @@
   {
     "id": 1843,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "chicken breast or tenders, (cut into 1-inch pieces)",
+    "ingredient": "chicken breast",
     "display_name": "chicken breast or tenders, (cut into 1-inch pieces)",
     "quantity": 1,
     "unit": "lb"
@@ -754,7 +754,7 @@
   {
     "id": 1844,
     "recipe_slug": "chicken-saag-chicken-and-spinach-curry",
-    "ingredient": "plain yogurt, (preferably thick greek-style yogurt)",
+    "ingredient": "greek yoghurt",
     "display_name": "plain yogurt, (preferably thick Greek-style yogurt)",
     "quantity": 0.25,
     "unit": "cup"
@@ -1034,7 +1034,7 @@
   {
     "id": 1458,
     "recipe_slug": "choc-chip-cookies",
-    "ingredient": "salted butter",
+    "ingredient": "butter",
     "display_name": "salted butter",
     "quantity": 1,
     "unit": "cup"
@@ -1610,7 +1610,7 @@
   {
     "id": 1530,
     "recipe_slug": "eggplant-parmi",
-    "ingredient": "onion",
+    "ingredient": "brown onion",
     "display_name": "onion",
     "quantity": 1,
     "unit": "each"
@@ -2002,7 +2002,7 @@
   {
     "id": 1579,
     "recipe_slug": "lentil-shepherds-pie",
-    "ingredient": "thyme leaf",
+    "ingredient": "thyme",
     "display_name": "thyme leaf",
     "quantity": 1,
     "unit": "tbsp"
@@ -2674,7 +2674,7 @@
   {
     "id": 1660,
     "recipe_slug": "quinoa-stuffed-sweet-potato",
-    "ingredient": "onion",
+    "ingredient": "brown onion",
     "display_name": "onion",
     "quantity": 1,
     "unit": "each"
@@ -2786,7 +2786,7 @@
   {
     "id": 1908,
     "recipe_slug": "red-curry-lentils",
-    "ingredient": "garlic",
+    "ingredient": "garlic clove",
     "display_name": "garlic",
     "quantity": 1,
     "unit": "tsp"
@@ -2922,8 +2922,8 @@
   {
     "id": 1676,
     "recipe_slug": "red-daal",
-    "ingredient": "onion",
-    "display_name": "onion",
+    "ingredient": "brown onion",
+    "display_name": "onions",
     "quantity": 2,
     "unit": "each"
   },
@@ -3594,7 +3594,7 @@
   {
     "id": 1822,
     "recipe_slug": "spaghetti-bolognese",
-    "ingredient": "worcestershire",
+    "ingredient": "worcestershire sauce",
     "display_name": "Worcestershire",
     "quantity": 2,
     "unit": "tsp"
@@ -3610,7 +3610,7 @@
   {
     "id": 1824,
     "recipe_slug": "spaghetti-bolognese",
-    "ingredient": "thyme leaf",
+    "ingredient": "thyme",
     "display_name": "thyme leaf",
     "quantity": 2,
     "unit": "sprig"
@@ -3962,7 +3962,7 @@
   {
     "id": 1772,
     "recipe_slug": "vegetable-chilli",
-    "ingredient": "onion",
+    "ingredient": "brown onion",
     "display_name": "onion",
     "quantity": 1,
     "unit": "each"
