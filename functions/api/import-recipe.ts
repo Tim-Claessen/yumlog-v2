@@ -361,12 +361,16 @@ function isRecipeType(type: unknown): boolean {
 function buildRawRecipe(node: Record<string, unknown>) {
   const cookTimeMin = parseDurationMinutes(node.cookTime) ?? parseDurationMinutes(node.totalTime);
 
+  // JSON-LD strings often carry HTML entities ("don&#39;t", "&quot;"), sometimes
+  // double-encoded ("&amp;#39;"). Decode them here, or they're saved as literal text.
+  const clean = (text: string) => decodeHtmlEntities(decodeHtmlEntities(text)).trim();
+
   return {
-    title: typeof node.name === "string" ? node.name.trim() : "",
-    ingredients: extractIngredients(node.recipeIngredient),
-    method_steps: flattenInstructions(node.recipeInstructions),
+    title: typeof node.name === "string" ? clean(node.name) : "",
+    ingredients: extractIngredients(node.recipeIngredient).map(clean),
+    method_steps: flattenInstructions(node.recipeInstructions).map(clean),
     cook_time_min: cookTimeMin ?? null,
-    category_hint: extractCategoryHint(node.recipeCategory, node.keywords),
+    category_hint: clean(extractCategoryHint(node.recipeCategory, node.keywords)),
     tips: [] as string[],
   };
 }
@@ -491,6 +495,13 @@ const NAMED_ENTITIES: Record<string, string> = {
   lsquo: "‘",
   rdquo: "”",
   ldquo: "“",
+  frac12: "½",
+  frac14: "¼",
+  frac34: "¾",
+  frac13: "⅓",
+  frac23: "⅔",
+  deg: "°",
+  times: "×",
 };
 
 function decodeHtmlEntities(text: string): string {
