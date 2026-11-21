@@ -9,6 +9,13 @@ export function toDisplayLabel(value: string | null | undefined): string {
     .replace(/\b\w/g, c => c.toUpperCase());
 }
 
+/** Upper-case the first letter and leave the rest as written.
+ *  "brown onion" → "Brown onion"; "plain yogurt, (Greek-style)" keeps its "G".
+ */
+export function sentenceCase(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 /** Split a possibly comma-separated multi-value field into individual trimmed values. */
 export function splitValues(value: string | null | undefined): string[] {
   if (!value) return [];

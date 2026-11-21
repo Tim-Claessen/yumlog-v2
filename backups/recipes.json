@@ -481,6 +481,19 @@
     "updated_at": "2026-06-20T01:51:06.954687+00:00"
   },
   {
+    "slug": "red-curry-lentils",
+    "title": "Red Curry Lentils",
+    "category": "curry",
+    "protein": "lentils",
+    "cook_time_min": 30,
+    "method": "Cook the lentils according to directions. Drain and set aside.\nMelt the butter in a large saucepan over medium high heat. Add the onion and saute for a few minutes until fragrant and golden. Add all the spices (curry paste, garam masala, curry powder, turmeric, cayenne, sugar, garlic, ginger) and stir fry for 1-2 minutes. Add the tomato puree; stir and simmer until smooth.\nAdd the lentils and the cream. Stir to combine and simmer for another 15-20 minutes (the longer, the better)!\nServe over rice and garnish with cilantro.",
+    "source_url": "https://pinchofyum.com/red-curry-lentils",
+    "created_at": "2026-11-19T10:32:52.256543+00:00",
+    "tips": null,
+    "substitutions": null,
+    "updated_at": "2026-11-19T10:32:52.256543+00:00"
+  },
+  {
     "slug": "red-daal",
     "title": "Red Daal",
     "category": "curry",
@@ -533,6 +546,19 @@
     "updated_at": "2026-06-20T01:51:06.954687+00:00"
   },
   {
+    "slug": "satay-rice-cakes",
+    "title": "Satay Rice Cakes",
+    "category": "appetisers_sides",
+    "protein": null,
+    "cook_time_min": 10,
+    "method": "Prepare rice cakes per instructions\nSlice onions and crush garlic\nFry onions, add garlic after onions are ready\nMix sauce ingredients together; peanut butter, chilli oil, sugar, soy sauce, rice vinegar, water\nAdd rice cakes and sauce to the onions and fry until mixed through\nServe with fried shallots and seaseme seeds",
+    "source_url": null,
+    "created_at": "2026-11-21T06:12:57.265637+00:00",
+    "tips": null,
+    "substitutions": null,
+    "updated_at": "2026-11-21T06:12:57.265637+00:00"
+  },
+  {
     "slug": "scones",
     "title": "Scones",
     "category": "sweet_treat",
@@ -583,6 +609,19 @@
     "tips": null,
     "substitutions": null,
     "updated_at": "2026-06-20T01:51:06.954687+00:00"
+  },
+  {
+    "slug": "sourdough-schiacciata",
+    "title": "Sourdough Schiacciata",
+    "category": "sourdough",
+    "protein": null,
+    "cook_time_min": 22,
+    "method": "Mix the flour, water and starter until there's no dry flour left. Rest 30 minutes.\nAdd the salt and 20 g of oil, then squeeze and fold until combined.\nDo 4 sets of stretch and folds, 30 minutes apart.\nLeave covered at room temperature until it's risen by about 50% and is jiggly. That takes 2–3 hours, depending on how warm the kitchen is.\nMove to an oiled container and refrigerate overnight (10–14 hours).\nOil the tray generously. Tip the dough in and gently stretch it towards the corners. If it springs back, rest it for 15 minutes and try again.\nProof at room temperature for 2–3 hours, until puffy and bubbly. Preheat the oven to 240°C (fan-forced 220°C) for the last 30 minutes.\nWhisk the brine. Dimple the dough deeply with oiled fingers right to the base, pour the brine over and let it pool in the dimples. Sprinkle with flaky salt.\nBake for 18–22 minutes, until deep golden on top and crisp underneath.\nBrush with a little oil straight out of the oven. Cool on a rack for at least 30 minutes before slicing.",
+    "source_url": null,
+    "created_at": "2026-10-23T08:49:26.58016+00:00",
+    "tips": "Makes one 33 × 23 cm tray\nUse an active starter at 100% hydration, fed 4–6 hours before mixing.\nSchiacciata means \"squashed\". It should end up 1.5–2 cm thick, much flatter than focaccia.\nThe brine is what makes it schiacciata: salty, oily pools that crisp the top.",
+    "substitutions": "Starter: swap the starter for 3 g instant yeast. Bulk for 1 hour, then refrigerate.\nTray: a 30 × 40 cm tray gives a thinner, crisper bread, so start checking at 16 minutes.",
+    "updated_at": "2026-10-23T08:49:26.58016+00:00"
   },
   {
     "slug": "spaghetti-bolognese",

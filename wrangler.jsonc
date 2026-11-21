@@ -8,7 +8,10 @@
   "main": "worker.ts",
   "assets": {
     "directory": "./dist",
-    "binding": "ASSETS"
+    "binding": "ASSETS",
+    // Missing paths get dist/404.html (src/pages/404.astro) with status 404,
+    // e.g. a new recipe's page before its rebuild has deployed.
+    "not_found_handling": "404-page"
   },
   "ai": {
     "binding": "AI"

@@ -1,10 +1,10 @@
 {
-  "exported_at": "2026-09-29T14:08:49.808Z",
+  "exported_at": "2026-11-21T09:43:11.460Z",
   "source": "https://wncacqqtrixnqlykchyy.supabase.co",
   "schema": "yumlog",
   "row_counts": {
-    "recipes": 51,
-    "ingredients": 201,
-    "recipe_ingredients": 483
+    "recipes": 54,
+    "ingredients": 209,
+    "recipe_ingredients": 516
   }
 }

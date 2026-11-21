@@ -16,6 +16,8 @@ export interface IngredientRow {
   name: string;
   /** Set when user picks an autocomplete suggestion (canonical DB value). */
   pickedCanonical: string | null;
+  /** Optional wording for the recipe page ("baby spinach, washed"); empty = same as name. */
+  shownAs: string;
 }
 
 export interface RecipeFormData {
@@ -175,14 +177,16 @@ export function recipeToFormData(recipe: RecipeRecord, ingredients: IngredientRe
     ingredients: ingredients.map(ing => ({
       quantity: ing.quantity != null ? String(ing.quantity) : '',
       unit: ing.unit ?? 'each',
-      name: ing.display_name ?? ing.ingredient,
+      name: ing.ingredient,
       pickedCanonical: ing.ingredient,
+      // Case-sensitive, so a save never rewrites capitals stored in display_name.
+      shownAs: ing.display_name && ing.display_name !== ing.ingredient ? ing.display_name : '',
     })),
   };
 }
 
 export function emptyIngredientRow(): IngredientRow {
-  return { quantity: '', unit: 'each', name: '', pickedCanonical: null };
+  return { quantity: '', unit: 'each', name: '', pickedCanonical: null, shownAs: '' };
 }
 
 export function emptyFormData(): RecipeFormData {
@@ -242,13 +246,16 @@ export async function saveRecipe(
   const ingredientRows = form.ingredients
     .map(row => {
       const name = row.name.trim();
+      if (!name && row.shownAs.trim()) {
+        throw new Error(`Add the ingredient for “${row.shownAs.trim()}”.`);
+      }
       if (!name) return null;
       const canonical = resolveCanonicalIngredient(row);
       if (!canonical) return null;
       return {
         quantity: row.quantity.trim() ? Number(row.quantity) : null,
         unit: row.unit || null,
-        display_name: name,
+        display_name: row.shownAs.trim() || name,
         ingredient: canonical,
       };
     })

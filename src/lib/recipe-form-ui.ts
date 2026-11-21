@@ -1,7 +1,7 @@
 import { supabase } from './supabase';
 import { wireIngredientAutocomplete } from './ingredient-autocomplete';
 import { promptIngredientCategories } from './ingredient-category-prompt';
-import { normalizeIngredient } from './ingredient';
+import { guessCanonical, normalizeIngredient } from './ingredient';
 import type { IngredientSection } from './ingredient-sections';
 import {
   collectCanonicalNames,
@@ -358,12 +358,17 @@ function populateFromImport(refs: ImportPanelRefs, sourceUrl: string, recipe: Im
   renderTextLines(refs.tipsList, recipe.tips ?? [], 'tip');
   renderTextLines(refs.subsList, recipe.substitutions ?? [], 'sub');
 
-  const ingredientRows = (recipe.ingredients ?? []).map(ing => ({
-    quantity: ing.quantity != null ? String(ing.quantity) : '',
-    unit: normaliseImportUnit(ing.unit),
-    name: ing.text,
-    pickedCanonical: null,
-  }));
+  // The database name is a guess from the line; the full line becomes the wording.
+  const ingredientRows = (recipe.ingredients ?? []).map(ing => {
+    const name = guessCanonical(ing.text, refs.knownIngredients);
+    return {
+      quantity: ing.quantity != null ? String(ing.quantity) : '',
+      unit: normaliseImportUnit(ing.unit),
+      name,
+      pickedCanonical: refs.knownIngredients.includes(name) ? name : null,
+      shownAs: ing.text.trim().toLowerCase() === name ? '' : ing.text.trim(),
+    };
+  });
   renderIngredients(
     refs.ingredientsList,
     ingredientRows.length > 0 ? ingredientRows : [emptyIngredientRow()],
@@ -428,6 +433,7 @@ function readIngredientRows(container: HTMLElement) {
     unit: (row.querySelector('.ing-unit') as HTMLSelectElement)?.value ?? 'each',
     name: (row.querySelector('.ing-name') as HTMLInputElement)?.value ?? '',
     pickedCanonical: row.dataset.pickedCanonical ?? null,
+    shownAs: (row.querySelector('.ing-shown') as HTMLInputElement)?.value ?? '',
   }));
 }
 
@@ -526,6 +532,8 @@ function addIngredientRow(
       <input type="text" class="ing-name ${inputClass}" value="${escapeAttr(row.name)}" placeholder="Ingredient" autocomplete="off" />
       <ul class="autocomplete-list hidden absolute z-10 left-0 right-0 top-full mt-1 bg-surface border border-outline-soft rounded-xl shadow-lg overflow-hidden max-h-48 overflow-y-auto"></ul>
       <p class="new-ingredient-hint hidden text-[11px] text-secondary mt-1">New ingredient — you'll pick a shopping aisle when you save.</p>
+      <button type="button" class="ing-shown-toggle${row.shownAs ? ' hidden' : ''} text-[11px] font-medium text-primary hover:underline mt-1">Change wording</button>
+      <input type="text" class="ing-shown${row.shownAs ? '' : ' hidden'} ${inputClass} mt-1.5" value="${escapeAttr(row.shownAs)}" placeholder="Shown on the recipe as…" aria-label="Shown on the recipe as" />
     </div>
     <button type="button" class="remove-row ${btnIcon} mt-0.5" aria-label="Remove ingredient">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -547,6 +555,14 @@ function addIngredientRow(
     el.dataset.pickedCanonical = ing;
     refreshNewIngredientHint();
     onChange();
+  });
+
+  const shownToggle = el.querySelector('.ing-shown-toggle') as HTMLButtonElement;
+  const shownInput = el.querySelector('.ing-shown') as HTMLInputElement;
+  shownToggle.addEventListener('click', () => {
+    shownToggle.classList.add('hidden');
+    shownInput.classList.remove('hidden');
+    shownInput.focus();
   });
 
   el.querySelector('.remove-row')?.addEventListener('click', () => {

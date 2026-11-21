@@ -1,0 +1,14 @@
+---
+import Layout from '../layouts/Layout.astro';
+// Served for any missing URL (wrangler.jsonc assets.not_found_handling = "404-page").
+// Mostly hit straight after creating a recipe: the form redirects to the new page
+// before the rebuild that creates it has finished.
+---
+
+<Layout title="Still cooking">
+  <div class="text-center py-16 md:py-24">
+    <h1 class="font-serif text-[32px] leading-tight font-semibold text-on-surface mb-2">This recipe is still cooking</h1>
+    <p class="text-sm text-on-surface-muted mb-6">Try again soon.</p>
+    <a href="/" class="inline-flex items-center min-h-11 px-4 rounded-full border border-primary-container text-sm font-semibold text-primary hover:bg-primary-container/40 transition-colors">Back to recipes</a>
+  </div>
+</Layout>

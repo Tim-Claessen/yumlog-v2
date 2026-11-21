@@ -144,6 +144,10 @@
     "category": "fresh produce"
   },
   {
+    "name": "cayenne pepper",
+    "category": "spices"
+  },
+  {
     "name": "celery stick",
     "category": "fresh produce"
   },
@@ -170,6 +174,10 @@
   {
     "name": "chilli flake",
     "category": "spices"
+  },
+  {
+    "name": "chilli oil",
+    "category": "other pantry"
   },
   {
     "name": "chinese barbecue seasoning",
@@ -296,6 +304,10 @@
     "category": "international food"
   },
   {
+    "name": "flaky salt",
+    "category": "spices"
+  },
+  {
     "name": "flaxseed meal",
     "category": "breakfast"
   },
@@ -326,6 +338,10 @@
   {
     "name": "garam masala",
     "category": "spices"
+  },
+  {
+    "name": "garlic",
+    "category": "fresh produce"
   },
   {
     "name": "garlic clove",
@@ -512,6 +528,10 @@
     "category": "breakfast"
   },
   {
+    "name": "oat milk",
+    "category": "other pantry"
+  },
+  {
     "name": "olive oil",
     "category": "other pantry"
   },
@@ -596,6 +616,10 @@
     "category": "fresh produce"
   },
   {
+    "name": "red curry paste",
+    "category": "international food"
+  },
+  {
     "name": "red lentil",
     "category": "tinned"
   },
@@ -614,6 +638,10 @@
   {
     "name": "rice bubbles",
     "category": "breakfast"
+  },
+  {
+    "name": "rice cake",
+    "category": "freezer"
   },
   {
     "name": "rice malt syrup",
@@ -737,6 +765,10 @@
   },
   {
     "name": "tomato paste",
+    "category": "tinned"
+  },
+  {
+    "name": "tomato puree",
     "category": "tinned"
   },
   {

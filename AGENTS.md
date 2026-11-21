@@ -210,10 +210,18 @@ Keep all normalisation logic in `src/lib/ingredient.ts` (`normalizeIngredient()`
 On save (create/edit form and manual shopping-list add):
 
 1. **Autocomplete safeguard** — as the user types, suggest existing canonical names from the `ingredients` table (recipe form: all names; shopping manual-add: names with a non-null category only). Shared UI in `src/lib/ingredient-autocomplete.ts`.
-2. **Normalise on save** — for genuinely new input: lowercase, trimmed, `pluralize.singular()` on the **last word** (handles potato/potatoes, leaf/leaves, berry/berries). Small exceptions list for words that look plural but aren't (e.g. `bitters`, `lentils`).
+2. **Normalise on save** — for genuinely new input: lowercase, trimmed, `pluralize.singular()` on the **last word** (handles potato/potatoes, leaf/leaves, berry/berries). Small exceptions list for words that look plural but aren't (e.g. `bitters`, `chips`). Not `lentils`, `oats` or `noodles`: the registry stores those singular (`red lentil`, `oat`, `vermicelli noodle`), so typed plurals must singularise to match.
 3. **New canonical names** — if the normalised name is not yet in `ingredients`, prompt the user to pick a shopping **category** before save (`ingredient-category-prompt.ts`). Upsert into `ingredients` with that category, then write the child row.
 
 Store the normalised value in `ingredients.name` / FK columns. Keep the user's wording in `recipe_ingredients.display_name`.
+
+### "Shown as" wording (database name vs recipe wording)
+
+Each ingredient row on `/create` has the **ingredient** box (autocomplete; the canonical name the line is stored and shopped as) and an optional **Shown as** box behind a small "Change wording" link, for how the line reads on the recipe page (`spinach` shown as "baby spinach, washed and dried").
+
+- Save: `display_name` = Shown as, or the ingredient box when Shown as is empty.
+- Edit: the ingredient box loads `ingredient`; Shown as loads `display_name` when it differs from it (case-sensitive, so a save never rewrites stored capitals).
+- Import: `guessCanonical()` (`ingredient.ts`) takes the part of the line before the first `,` or `(` as the ingredient (a known name where it matches); the whole line goes in Shown as. The "New ingredient" hint flags guesses that aren't in the registry yet.
 
 ### Ingredient shopping sections
 
@@ -240,7 +248,9 @@ Logic: `ingredient-registry.ts` + `ingredient-registry-ui.ts`. SQL: the two RPCs
 
 ### Display pluralisation (recipe detail only)
 
-`displayIngredientName()` in `src/lib/ingredient.ts` — when `quantity > 1` and `unit === 'each'`, pluralise the last word of the display name for rendering only (e.g. `3 button mushroom` → `3 button mushrooms`). Stored values stay singular.
+`displayIngredientName()` in `src/lib/ingredient.ts` — when `quantity > 1` and `unit === 'each'`, pluralise the last word of the display name for rendering only (e.g. `3 garlic clove` → `3 garlic cloves`). Stored values stay singular. Only when the line reads as its canonical name: custom Shown-as wording renders exactly as written.
+
+**Sentence case** — recipe pages run each ingredient line through `sentenceCase()` (`src/lib/format.ts`) at build time: first letter capital, the rest as stored (`brown onion` → "Brown onion"). Data stays lowercase; the shopping list and registry screens are unchanged.
 
 ---
 
@@ -378,6 +388,8 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 - Single form for both modes. **Create:** `/create`. **Edit:** `/create?edit={slug}` — prepopulates fields; slug stays fixed on save.
 - Auth-gated. Dynamic ingredient rows, method steps, tips, substitutions. Ingredient autocomplete on each row (all canonical names).
 - **New ingredient prompt** — on save, any canonical name not yet in `ingredients` opens the category picker before write.
+- **Shown as** — optional per-row recipe wording (see **"Shown as" wording**).
+- After **create**, the form redirects to the new recipe's page, which 404s until the rebuild deploys (~2–3 min): that's the "still cooking" page below.
 
 #### Shopping list (`shopping.astro`)
 
@@ -396,6 +408,10 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 - Entry points: public nav item + a "Loaf calculator" pill on the `sourdough-bread` recipe page only (guarded by `slug === 'sourdough-bread'` in `[slug].astro`).
 
 > **Timers — investigated and ruled out (2026-07-29).** A "set 4 phone timers at 30/60/90/120 min" button is **not possible** from a website; don't re-investigate. The Notification Triggers API (`TimestampTrigger`) was [abandoned by Chrome](https://developer.chrome.com/docs/web-platform/notification-triggers) and never shipped. The `intent://…action=android.intent.action.SET_TIMER` route fails silently because Chrome only launches intents whose target activity declares `android.intent.category.BROWSABLE`, and the Clock app's `HandleApiCalls` activity declares only `DEFAULT`/`VOICE` — deliberately, so websites can't set system alarms. The only working alternatives are an in-page countdown (needs a service worker, since `new Notification()` throws on Android Chrome) or full Web Push with a server-side scheduler. Both were declined as not worth the complexity.
+
+#### 404 (`404.astro`)
+
+Very plain: "This recipe is still cooking", "Try again soon.", a Back to recipes link. Served for every missing URL by `assets.not_found_handling: "404-page"` in `wrangler.jsonc` (status 404), including through `worker.ts`'s `env.ASSETS.fetch` fallback.
 
 #### Login (`login.astro`)
 
@@ -469,7 +485,7 @@ Set the same variables on the Cloudflare Worker `yumlog` in **both** places: **S
 2. Static output (`dist/`, from `astro build`) is served via the `assets` binding declared in `wrangler.jsonc` — there is no Astro Cloudflare adapter and no SSR.
 3. **`functions/api/import-recipe.ts` does NOT auto-route.** File-based auto-routing of a `functions/` directory into `/api/*` paths is a **Pages-only** convention. On this project, it does nothing by itself.
 4. The **only** thing that makes `/api/import-recipe` reachable is `worker.ts` (repo root) — the `main` entrypoint declared in `wrangler.jsonc`. It's a plain `fetch(request, env)` handler that checks the URL path, calls the matching function's exported `onRequest({ request, env })` for known API paths, and falls back to `env.ASSETS.fetch(request)` (serving the static build) for everything else.
-5. **Adding a new server-side route?** Write the handler under `functions/` in Pages-Function style (`export const onRequest = async ({ request, env }) => ...`) for consistency, but you **must** also add a branch for its path in `worker.ts`, or it will 404 in production forever, silently, with no error anywhere.
+5. **Adding a new server-side route?** Write the handler under `functions/` in Pages-Function style (`export const onRequest = async ({ request, env }) => ...`) for consistency, but you **must** also add a branch for its path in `worker.ts`, or it will 404 in production forever, silently, with no error anywhere. (An unwired path falls through to the assets, which answer with the "still cooking" 404 page's HTML, so a client expecting `{ error }` JSON gets HTML.)
 
 **How to verify any of this yourself** (works whether or not you can find the right dashboard page):
 
@@ -478,7 +494,7 @@ npm run build
 npx wrangler deploy --dry-run   # prints the exact bindings (AI, ASSETS, etc.) Cloudflare will see — no deploy happens
 npx wrangler dev                # runs worker.ts + the static build locally at http://127.0.0.1:8787
 ```
-`wrangler dev` is the fastest way to catch a routing mistake before it ever reaches production — hit the route with `curl` and check the status code (404 = not wired in `worker.ts`; 401/405/etc. = it's reaching the handler).
+`wrangler dev` is the fastest way to catch a routing mistake before it ever reaches production — hit the route with `curl` and check the status code (404 with the "still cooking" HTML = not wired in `worker.ts`; 401/405/etc. = it's reaching the handler).
 
 **If the Cloudflare dashboard doesn't show a "Functions" or "Bindings" tab** for this project — that's expected for a Workers-Builds project, not a sign something is broken. Bindings (`AI`, `ASSETS`) and the custom domain `yumlog.timclaessen.com` (`routes`, `custom_domain: true`) come from `wrangler.jsonc` directly; there's no dashboard step required to "turn them on" for this project type. Keep the domain declared there — without it, every deploy warns that it will override the dashboard's domain route. Use `wrangler deploy --dry-run` above instead of hunting for a dashboard page.
 
@@ -622,7 +638,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
   astro.config.mjs       ← Tailwind wired via vite.plugins: [tailwindcss()]
   package.json
   tsconfig.json
-  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding, AI binding, custom domain (yumlog.timclaessen.com), cron
+  wrangler.jsonc         ← Worker config: main (worker.ts), assets binding (+ 404 page handling), AI binding, custom domain (yumlog.timclaessen.com), cron
   worker.ts               ← Worker entrypoint — dispatches /api/* routes (import-recipe, keepalive), falls back to ASSETS; also holds the scheduled() Supabase keep-alive (see Deployment)
   .env                   ← Supabase URL + anon key (gitignored)
   .dev.vars               ← local-only env vars for `wrangler dev` (gitignored)
@@ -646,6 +662,7 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     create.astro         ← create/edit recipe form (auth-gated)
     shopping.astro       ← shared shopping list (auth-gated)
     sourdough.astro      ← public loaf calculator; ratios read at build time
+    404.astro            ← "still cooking" page for any missing URL
     settings.astro       ← site status (auth-gated)
     /settings/
       ingredients.astro  ← canonical ingredient registry admin (auth-gated)

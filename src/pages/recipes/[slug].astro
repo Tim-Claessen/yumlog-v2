@@ -2,7 +2,7 @@
 import Layout from '../../layouts/Layout.astro';
 import { supabase } from '../../lib/supabase';
 import { failBuild } from '../../lib/build-guard';
-import { toDisplayLabel, splitValues, parseStepLabel, stripBullet } from '../../lib/format';
+import { toDisplayLabel, splitValues, parseStepLabel, stripBullet, sentenceCase } from '../../lib/format';
 import { displayIngredientName } from '../../lib/ingredient';
 
 export async function getStaticPaths() {
@@ -152,11 +152,12 @@ const shoppingIngredients = (ingredients ?? []).map(ing => ({
         <ul class="flex flex-col gap-1.5">
           {ingredients.map(ing => {
             const amount = formatAmount(ing.quantity, ing.unit);
-            const name = displayIngredientName(
+            const name = sentenceCase(displayIngredientName(
               ing.display_name ?? ing.ingredient,
               ing.quantity,
               ing.unit,
-            );
+              ing.ingredient,
+            ));
             return (
               <li class="flex items-baseline gap-3">
                 <span class="text-primary font-semibold tabular-nums text-sm shrink-0 w-[58px] text-right">
