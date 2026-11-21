@@ -411,7 +411,7 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### 404 (`404.astro`)
 
-Very plain: the small `peeking` pixel dog (`public/pixel-peeking.png`, 64 px wide, `alt=""`; see **Maker's mark**), "This recipe is still cooking", "Try again soon.", a Back to recipes link. Served for every missing URL by `assets.not_found_handling: "404-page"` in `wrangler.jsonc` (status 404), including through `worker.ts`'s `env.ASSETS.fetch` fallback.
+Very plain: the small peeking pixel dog without its ledge (`public/pixel-peeking-no-ledge.png`, 56 px wide, `alt=""`; see **Maker's mark**), "This recipe is still cooking", "Try again soon.", a Back to recipes link. Served for every missing URL by `assets.not_found_handling: "404-page"` in `wrangler.jsonc` (status 404), including through `worker.ts`'s `env.ASSETS.fetch` fallback.
 
 #### Login (`login.astro`)
 
@@ -430,7 +430,7 @@ Tim's maker's mark, from the `mark` repo (`~/.repos/mark`), in three small place
 
 - **Footer stamp** — `Layout.astro`'s `<footer>`, on every page: `src/assets/stamp.svg` imported as an Astro SVG component (so it's inlined and takes `currentColor`), 24 px tall (`h-6`), in a faint mix of 18% `on-surface` into `surface` so it only just shows (Tim's choice over the mark README's "not a pale grey"), aria-hidden, no link or caption. `<body>` is a flex column with `<main>` as `flex-1`, so the footer sits at the bottom on short pages; its `pb-28 md:pb-10` keeps it clear of the mobile bottom nav (that padding moved off `<main>`).
 - **Motion** — only the `mk-flick` ear twitch on hover; the rules are copied from the mark's `motion.css` into `global.css`, inside `prefers-reduced-motion: no-preference`. No load animation; the footer never animates beyond that.
-- **Pixel dogs** — `public/pixel-peeking.png` (404) and `public/pixel-sleeping-back.png` (empty shopping list), copied from the mark's `web/` (128 px wide; shown at 64 and 56 px). Never the full-size PNGs. At most one dog per screen.
+- **Pixel dogs** — `public/pixel-peeking-no-ledge.png` (404) and `public/pixel-sleeping-back.png` (empty shopping list), copied from the mark's `web/` (128 px wide; both shown at 56 px). Never the full-size PNGs. At most one dog per screen.
 
 ### Navigation
 
