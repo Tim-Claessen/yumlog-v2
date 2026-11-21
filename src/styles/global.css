@@ -51,3 +51,17 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
 }
+
+/* Maker's mark: the footer stamp's ear twitch, copied from the mark repo's motion.css (v1).
+   Change it there first, then copy it here. */
+.mk-ear { transform-box: view-box; transform-origin: 365px 69px; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .mk-flick:hover .mk-ear { animation: mk-flick 420ms ease-in-out 1; }
+}
+
+@keyframes mk-flick {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-8deg); }
+  60% { transform: rotate(3deg); }
+}

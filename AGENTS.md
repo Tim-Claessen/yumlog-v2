@@ -393,7 +393,7 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### Shopping list (`shopping.astro`)
 
-- Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only.
+- Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only. The empty state (`#shopping-empty`) shows the small `sniffing` pixel dog (`public/pixel-sniffing.png`, 56 px wide, `alt=""`) above its line of text.
 
 #### Sourdough loaf calculator (`sourdough.astro`)
 
@@ -411,7 +411,7 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### 404 (`404.astro`)
 
-Very plain: "This recipe is still cooking", "Try again soon.", a Back to recipes link. Served for every missing URL by `assets.not_found_handling: "404-page"` in `wrangler.jsonc` (status 404), including through `worker.ts`'s `env.ASSETS.fetch` fallback.
+Very plain: the small `peeking` pixel dog (`public/pixel-peeking.png`, 64 px wide, `alt=""`; see **Maker's mark**), "This recipe is still cooking", "Try again soon.", a Back to recipes link. Served for every missing URL by `assets.not_found_handling: "404-page"` in `wrangler.jsonc` (status 404), including through `worker.ts`'s `env.ASSETS.fetch` fallback.
 
 #### Login (`login.astro`)
 
@@ -423,6 +423,14 @@ Auth-gated static shells; all Supabase reads/writes client-side after `requireAu
 
 - **`/settings`** — site status panel: **Website last published** (build timestamp baked into HTML at deploy, formatted client-side via `formatSettingsTimestamp()` in `settings.ts`, locale `en-AU`); **Shopping list last changed** (`max(shopping_list.updated_at)` after migration); link row to ingredient registry.
 - **`/settings/ingredients`** — canonical ingredient registry admin (see **Ingredient registry admin** above).
+
+### Maker's mark
+
+Tim's maker's mark, from the `mark` repo (`~/.repos/mark`), in three small places. They're **copies**: change the mark there first, then copy it here. Never write the dog's name anywhere (files, alt text, commits).
+
+- **Footer stamp** — `Layout.astro`'s `<footer>`, on every page: `src/assets/stamp.svg` imported as an Astro SVG component (so it's inlined and takes `currentColor`), 24 px tall (`h-6`), `text-on-surface` (not muted: the fine lines smudge in pale grey), aria-hidden, no link or caption. `<body>` is a flex column with `<main>` as `flex-1`, so the footer sits at the bottom on short pages; its `pb-28 md:pb-10` keeps it clear of the mobile bottom nav (that padding moved off `<main>`).
+- **Motion** — only the `mk-flick` ear twitch on hover; the rules are copied from the mark's `motion.css` into `global.css`, inside `prefers-reduced-motion: no-preference`. No load animation; the footer never animates beyond that.
+- **Pixel dogs** — `public/pixel-peeking.png` (404) and `public/pixel-sniffing.png` (empty shopping list), copied from the mark's `web/` (128 px wide; shown at 64 and 56 px). Never the full-size PNGs. At most one dog per screen.
 
 ### Navigation
 
@@ -669,7 +677,9 @@ The import endpoint does **not** run under Astro's dev server — `npm run dev` 
     /recipes/
       [slug].astro       ← static recipe detail (getStaticPaths at build time)
   /layouts/
-    Layout.astro         ← shared HTML shell; fonts, wordmark, auth-aware nav; bottom nav on mobile
+    Layout.astro         ← shared HTML shell; fonts, wordmark, auth-aware nav; bottom nav on mobile; footer stamp
+  /assets/
+    stamp.svg            ← maker's mark, copied from the mark repo (inlined in the footer)
   /lib/
     supabase.ts          ← Supabase client singleton, db.schema = yumlog (always import from here)
     db-schema.ts         ← YUMLOG_DB_SCHEMA = 'yumlog' (also used by worker.ts / functions/)

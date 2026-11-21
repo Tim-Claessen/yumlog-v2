@@ -132,9 +132,10 @@ import Layout from '../layouts/Layout.astro';
 
     <p id="shopping-error" class="hidden text-sm text-primary mb-4" role="alert"></p>
 
-    <p id="shopping-empty" class="hidden text-on-surface-muted text-center py-16 text-sm">
-      Nothing on the list yet — add from a recipe or type an item above.
-    </p>
+    <div id="shopping-empty" class="hidden text-on-surface-muted text-center py-16 text-sm">
+      <img src="/pixel-sniffing.png" alt="" width="56" height="33" class="mx-auto mb-3" />
+      <p>Nothing on the list yet — add from a recipe or type an item above.</p>
+    </div>
 
     <div
       id="list-view-controls"

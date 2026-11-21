@@ -3,6 +3,7 @@ import '@fontsource-variable/newsreader';
 import '@fontsource-variable/newsreader/wght-italic.css';
 import '@fontsource-variable/hanken-grotesk';
 import '../styles/global.css';
+import Stamp from '../assets/stamp.svg';
 
 interface Props {
   title?: string;
@@ -40,7 +41,7 @@ const settingsNavItem = {
     <meta name="theme-color" content="#F6ECE0" />
     <title>{pageTitle}</title>
   </head>
-  <body class="min-h-screen bg-surface text-on-surface">
+  <body class="min-h-screen flex flex-col bg-surface text-on-surface">
 
     <!-- Top app bar -->
     <header class="bg-surface-low border-b border-outline-soft sticky top-0 z-20">
@@ -114,10 +115,15 @@ const settingsNavItem = {
       </div>
     </header>
 
-    <!-- Page content — extra bottom padding on mobile for the fixed nav bar -->
-    <main class="max-w-4xl mx-auto px-4 py-6 pb-28 md:pb-8">
+    <main class="flex-1 w-full max-w-4xl mx-auto px-4 py-6">
       <slot />
     </main>
+
+    <!-- Footer: the maker's mark (copied from the mark repo). Extra bottom padding on
+         mobile keeps it clear of the fixed nav bar. -->
+    <footer class="w-full max-w-4xl mx-auto px-4 pt-6 pb-28 md:pb-10 flex justify-center text-on-surface">
+      <Stamp class="mk-flick h-6 w-auto" />
+    </footer>
 
     <!-- Mobile bottom nav -->
     <nav
