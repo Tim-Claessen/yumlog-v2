@@ -393,7 +393,7 @@ All homepage interactivity lives in a single inline `<script>` at the bottom of 
 
 #### Shopping list (`shopping.astro`)
 
-- Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only. The empty state (`#shopping-empty`) shows the small `sniffing` pixel dog (`public/pixel-sniffing.png`, 56 px wide, `alt=""`) above its line of text.
+- Auth-gated. 32 px serif page title; "Clear done" in `text-primary`. Manual-add panel (`bg-surface-low/80`). Aisle eyebrows (`text-secondary`, uppercase tracked); paper list cards per aisle. Custom checkboxes: unchecked `border-outline-soft`; checked `bg-secondary` with cream checkmark; sage = done. Grouped or flat list (see **Shopping list UI** above). Terracotta on aisle toggle and primary actions only. The empty state (`#shopping-empty`) shows the small `sleeping-back` pixel dog (`public/pixel-sleeping-back.png`, 56 px wide, `alt=""`) above its line of text.
 
 #### Sourdough loaf calculator (`sourdough.astro`)
 
@@ -430,7 +430,7 @@ Tim's maker's mark, from the `mark` repo (`~/.repos/mark`), in three small place
 
 - **Footer stamp** — `Layout.astro`'s `<footer>`, on every page: `src/assets/stamp.svg` imported as an Astro SVG component (so it's inlined and takes `currentColor`), 24 px tall (`h-6`), in a faint mix of 18% `on-surface` into `surface` so it only just shows (Tim's choice over the mark README's "not a pale grey"), aria-hidden, no link or caption. `<body>` is a flex column with `<main>` as `flex-1`, so the footer sits at the bottom on short pages; its `pb-28 md:pb-10` keeps it clear of the mobile bottom nav (that padding moved off `<main>`).
 - **Motion** — only the `mk-flick` ear twitch on hover; the rules are copied from the mark's `motion.css` into `global.css`, inside `prefers-reduced-motion: no-preference`. No load animation; the footer never animates beyond that.
-- **Pixel dogs** — `public/pixel-peeking.png` (404) and `public/pixel-sniffing.png` (empty shopping list), copied from the mark's `web/` (128 px wide; shown at 64 and 56 px). Never the full-size PNGs. At most one dog per screen.
+- **Pixel dogs** — `public/pixel-peeking.png` (404) and `public/pixel-sleeping-back.png` (empty shopping list), copied from the mark's `web/` (128 px wide; shown at 64 and 56 px). Never the full-size PNGs. At most one dog per screen.
 
 ### Navigation
 
